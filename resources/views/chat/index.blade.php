@@ -174,7 +174,7 @@
             background-color: #3c8dbc;
             display: flex;
             align-items: center;
-            padding-left: 1rem;
+            padding-left: 10px;
         }
         #chat-header .header-title > span {
             color: white !important;
@@ -503,18 +503,18 @@
 @section('content')
     <div class="content-container row w-100 m-0 p-0">
         <div class="col-xs-4 m-0 p-0 d-flex flex-column" id="message-nav">
-            <span id="current-rooms-span">Current</span>
+            {{-- <span id="current-rooms-span">Current</span> --}}
             <div id="current-container">
                 <ul class="w-100 list-unstyled mb-0" id="current-rooms">
                 </ul>
-                <div class="w-100 d-none justify-content-center align-items-center show-all-rooms" id="show-all-current" role="button">
+                {{-- <div class="w-100 d-none justify-content-center align-items-center show-all-rooms" id="show-all-current" role="button">
                     <i class="fas fa-chevron-down"></i>
                 </div>
                 <div class="w-100 d-none justify-content-center align-items-center show-less-rooms" id="show-less-current" role="button">
                     <i class="fas fa-chevron-up"></i>
-                </div>
+                </div> --}}
             </div>
-            <span id="waiting-rooms-span">Waiting</span>
+            {{-- <span id="waiting-rooms-span">Waiting</span>
             <div id="waiting-container">
                 <ul class="w-100 list-unstyled mb-0" id="waiting-rooms">
                 </ul>
@@ -524,7 +524,7 @@
                 <div class="w-100 d-none justify-content-center align-items-center show-less-rooms" id="show-less-waiting" role="button">
                     <i class="fas fa-chevron-up"></i>
                 </div>
-            </div>
+            </div> --}}
         </div>
         <div class="col col-xs-8 m-0 p-0 h-100" id="message-detail">
             <div class="chat-container w-100 h-100">
@@ -580,7 +580,6 @@
             name: "{{ $user_data->name }}",
             email: "{{ $user_data->email }}",
             phone: "{{ $user_data->phone }}",
-            gender: {{ $user_data->gender }},
             avatar_url: "{{ $user_data->avatar_url }}",
         }
     </script>

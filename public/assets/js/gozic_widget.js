@@ -1,7 +1,7 @@
 $(document).ready(function() {
     $("body").append(
         "<div id='gozic-widget'>" +
-            "<iframe src='http://127.0.0.1:5500/gozic_widget.html' width='60' height='60' frameborder='0' allowfullscreen></iframe>" +
+            "<iframe src='https://appbanhang.gozic.vn/module/chat-firebase/iframe' width='60' height='60' frameborder='0' allowfullscreen></iframe>" +
         "</div>");
     $("head").append(
         "<style>" +

@@ -511,7 +511,7 @@ function addMessage(message, message_type="text") {
 }
 
 // Sync rooms in real-time with database
-onSnapshot(query(col_rooms, orderBy('timestamp')), async (snapshot) => {
+onSnapshot(query(col_rooms, orderBy('timestamp', 'desc'), where("participants", "array-contains", system_data.id)), async (snapshot) => {
     // console.log("changed")
     current_room_list = [];
     waiting_room_list = [];
@@ -557,13 +557,14 @@ onSnapshot(query(col_rooms, orderBy('timestamp')), async (snapshot) => {
     }));
     // console.log(current_room_list, waiting_room_list)
 
-    current_room_list = current_room_list.reverse();
-    waiting_room_list = waiting_room_list.reverse();
+    // current_room_list = current_room_list.reverse();
+    // waiting_room_list = waiting_room_list.reverse();
 
-    if (is_show_all_current) showAllCurrent();
-    else showLessCurrent();
-    if (is_show_all_waiting) showAllWaiting();
-    else showLessWaiting();
+    showAllCurrent();
+    // if (is_show_all_current) showAllCurrent();
+    // else showLessCurrent();
+    // if (is_show_all_waiting) showAllWaiting();
+    // else showLessWaiting();
 }, (error) => {
     console.log(error);
 });
@@ -683,8 +684,8 @@ $(document).on('click', '.chat-message > img', function() {
     $("body").append(popupImage($(this).prop("src")));
 })
 function popupImage(img_src) {
-    return "<div id='popup-image' style='position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; margin: 0; padding: 0; display: flex; align-items: center; justify-content: center; background-color: rgba(225, 225, 225, 0.6); z-index: 9999;'>" +
-        "<div class='container-fluid h-100 p-5 d-flex align-items-center justify-content-center'>" +
+    return "<div id='popup-image' style='position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; margin: 0; padding: 0; display: flex; align-items: center; justify-content: center; background-color: rgba(225, 225, 225, 0.6); z-index: 9999;'>" +
+        "<div class='container-fluid h-100 p-5 d-flex align-items-center justify-content-center' style='max-width: 80%; max-height: 80%;'>" +
             "<img src='" + img_src + "' style='max-width: 100%; max-height: 100%;'>" +
         "</div>" +
         "<div style='position: absolute; top: 2rem; right: 2rem'>" +
