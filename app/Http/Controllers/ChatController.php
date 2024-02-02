@@ -138,7 +138,7 @@ class ChatController extends Controller
         $user_data->email = $user->email;
         $user_data->phone = "88886666";
         $user_data->gender = 1;
-        $user_data->avatarUrl = "/assets/image/system.jpg";
+        $user_data->avatar_url = "https://cdn.gokisoft.com/uploads/stores/97/2024/01/583143640.jpg";
 
         return view('chat.index', compact("user_data"));
     }

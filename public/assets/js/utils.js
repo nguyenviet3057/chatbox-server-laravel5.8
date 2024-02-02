@@ -77,39 +77,43 @@ function reverseObjectKeys(originalObject) {
 }
 
 // Upload image API
-async function uploadFile(file, callback) {
-    // if (file != null) {
-    //     if (!file.name.match(/.(jpg|jpeg|png|gif|bmp|webp)$/i))
-    //         return alert('HĂ¬nh áº£nh báº¡n táº£i lĂªn khĂ´ng Ä‘Ăºng Ä‘á»‹nh dáº¡ng file, vui lĂ²ng kiá»ƒm tra láº¡i (jpg, jpeg, png, bmp, gif)');
-    // }
-    // if (file.size > (30 * 1024 * 1024)) { 
-    //     return alert('Dung lÆ°á»£ng file áº£nh quĂ¡ lá»›n -> YĂªu cáº§u file dung lÆ°á»£ng <= 30M') 
-    // }
-    // var url = '//gozic.vn/api/upload'
-    var url = '//appbanhang.gozic.vn/api/upload'
-    var xhr = new XMLHttpRequest(); 
-    var fd = new FormData(); 
-    xhr.open('POST', url, true); 
-    xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest'); 
-    xhr.onreadystatechange = function (e) {
-        if (xhr.readyState == 4 && xhr.status == 200) {
-            var obj = JSON.parse(xhr.responseText)
-            console.log(obj);
-            if (obj.status == 0) {
-                alert(obj.msg)
-                return
+function uploadFile(file) {
+    return new Promise((resolve, reject) => {
+        // if (file != null) {
+        //     if (!file.name.match(/.(jpg|jpeg|png|gif|bmp|webp)$/i))
+        //         return alert('HĂ¬nh áº£nh báº¡n táº£i lĂªn khĂ´ng Ä‘Ăºng Ä‘á»‹nh dáº¡ng file, vui lĂ²ng kiá»ƒm tra láº¡i (jpg, jpeg, png, bmp, gif)');
+        // }
+        // if (file.size > (30 * 1024 * 1024)) { 
+        //     return alert('Dung lÆ°á»£ng file áº£nh quĂ¡ lá»›n -> YĂªu cáº§u file dung lÆ°á»£ng <= 30M') 
+        // }
+        // var url = '//gozic.vn/api/upload'
+        var url = '//appbanhang.gozic.vn/api/upload'
+        // var url = '//localhost:8000/api/upload'
+        var xhr = new XMLHttpRequest();
+        var fd = new FormData();
+        xhr.open('POST', url, true);
+        xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+        xhr.onreadystatechange = function (e) {
+            if (xhr.readyState == 4 && xhr.status == 200) {
+                var obj = JSON.parse(xhr.responseText)
+                // console.log(obj);
+                if (obj.status == 0) {
+                    alert(obj.msg)
+                    return
+                }
+                // callback(obj.url)
+                resolve(obj.url);
             }
-            callback(obj.url)
+        };
+        fd.append('tags', 'browser_upload');
+        if (file != null) {
+            fd.append('file', file);
         }
-    }; 
-    fd.append('tags', 'browser_upload'); 
-    if (file != null) { 
-        fd.append('file', file); 
-    }
-    fd.append('isWaterMask', false); 
-    fd.append('watermask', ""); 
-    fd.append('idCat', 0); 
-    fd.append('color', ""); 
-    fd.append('enabled', 1); 
-    xhr.send(fd);
+        fd.append('isWaterMask', false);
+        fd.append('watermask', "");
+        fd.append('idCat', 0);
+        fd.append('color', "");
+        fd.append('enabled', 1);
+        xhr.send(fd);
+    });
 }

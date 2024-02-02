@@ -6,16 +6,6 @@ import { getAuth, connectAuthEmulator } from "https://www.gstatic.com/firebasejs
 import { getFirestore, connectFirestoreEmulator, collection, orderBy, getDocs, doc, getDoc, addDoc, setDoc, updateDoc, serverTimestamp, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 // Initialize Firebase
-// const firebaseConfig = {
-//     apiKey: "AIzaSyB7OEUgaGaipy8nWbAYXacrLNNNVEYZm_4",
-//     authDomain: "chat-bot-ec322.firebaseapp.com",
-//     databaseURL: "https://chat-bot-ec322-default-rtdb.asia-southeast1.firebasedatabase.app",
-//     projectId: "chat-bot-ec322",
-//     storageBucket: "chat-bot-ec322.appspot.com",
-//     messagingSenderId: "765269828752",
-//     appId: "1:765269828752:web:c173315fcc8095e82b6415",
-//     measurementId: "G-52EMCT879B"
-// };
 const firebaseConfig = {
     apiKey: "AIzaSyDw2S01aViwowyyJ-A0m7pVTX8OIZF2VJU",
     authDomain: "ziczacapp.firebaseapp.com",
@@ -31,25 +21,11 @@ const analytics = getAnalytics(app);
 // var db = getDatabase(app);
 var auth = getAuth(app);
 var fs = getFirestore(app);
-// Use emulators
-// connectDatabaseEmulator(db, 'localhost', 9000);
-// connectAuthEmulator(auth, "http://127.0.0.1:9099");
-// connectFirestoreEmulator(fs, '127.0.0.1', 8082);
-// const system_data = {
-//     id: "S10001",
-//     name: "Nguyen Admin",
-//     email: "admin@gmail.com",
-//     gender: 1,
-//     avatarUrl: "/assets/image/system.jpg",
-// }
 let customer_data = {};
 let avatar_list = {
     "admin": "/assets/image/icon-gozic.png",
     "system": "/assets/image/icon-gozic.png"
 }
-$(document).ready(function() {
-    $("p.firebase-emulator-warning").remove();
-})
 
 /* 
 *
@@ -69,15 +45,11 @@ var default_input_height = message_input.scrollHeight;
 
 // Declare markdown converter object
 var md = window.markdownit();
-// Remember the old renderer if overridden, or proxy to the default renderer.
 var defaultRender = md.renderer.rules.link_open || function (tokens, idx, options, env, self) {
     return self.renderToken(tokens, idx, options);
 };
 md.renderer.rules.link_open = function (tokens, idx, options, env, self) {
-    // Add a new `target` attribute, or replace the value of the existing one.
     tokens[idx].attrSet('target', '_blank');
-
-    // Pass the token to the default renderer.
     return defaultRender(tokens, idx, options, env, self);
 };
 
@@ -88,6 +60,14 @@ var is_show_all_current = false;
 var is_show_all_waiting = false;
 var room_id = null; // current selected room
 var max_room = 3;
+const CHECK_TYPE = {
+    CHAT_TEXT: 1,
+    CHAT_IMAGES: 2,
+    CHAT_PRODUCT: 3,
+    REPLY_CHAT_TEXT: 4,
+    REPLY_CHAT_IMAGES: 5,
+    REPLY_CHAT_PRODUCT: 6,
+}
 
 var reply = {
     id: "",
@@ -109,14 +89,23 @@ function sendMessage(event) {
     message_input.style.height = default_input_height;
 }
 
-// document.querySelector("#submit-btn").addEventListener("click", (event) => sendMessage(event, this));
-
 function renderMessage(message, is_reply=false, reply, avatar_url = avatar_list) {
-    console.log(is_reply, reply);
+    // console.log(is_reply, reply);
     let message_content = "";
     switch (message.type) {
         case "image":
-            message_content = "<img src='" + message.content + "'>";
+            if (message.content.length == 1) {
+                message_content = "<img src='" + message.content[0] + "'>";
+            } else {
+                message_content = "<div class='row w-100 m-0 images-message'>";
+                message.content.forEach((img_src, index) => {
+                    message_content +=
+                    "<div class='col-6 p-1 d-flex align-items-center justify-content-center'>" +
+                        "<img src='" + img_src + "' class='img-fluid'>" +
+                    "</div>";
+                });
+                message_content += "</div>";
+            }
             break;
         case "markdown":
             message_content = "<div>" + md.render(message.content) + "</div>";
@@ -129,7 +118,16 @@ function renderMessage(message, is_reply=false, reply, avatar_url = avatar_list)
     let reply_content = "";
     if (is_reply) {
         if (reply.type == "text") reply_content = "<div class='reply-note'><span>" + shortenStringDisplay(reply.message, 30) + "</span></div>";
-        else reply_content = "<div class='reply-note'><img src='" + reply.images[0] +"'></div>";
+        else {
+            reply_content = "<div class='reply-note row w-100 images-message'>";
+            reply.images.forEach((img_src, index) => {
+                reply_content +=
+                "<div class='col-6 p-1 d-flex align-items-center justify-content-center'>" +
+                    "<img src='" + img_src + "' class='img-fluid'>" +
+                "</div>";
+            })
+            reply_content += "</div>";
+        }
     }
     // console.log(message_content);
     if (last_message_list && last_message_list.classList.contains("chat-" + message.role)) {
@@ -170,7 +168,7 @@ function renderMessage(message, is_reply=false, reply, avatar_url = avatar_list)
 function renderOldMessage(messages, participants=[]) {
     // console.log(messages, participants);
     messages.forEach((message) => {
-        console.log(message.data())
+        // console.log(message.data())
         let message_data = {
             id: message.id,
             type: "text",
@@ -179,17 +177,16 @@ function renderOldMessage(messages, participants=[]) {
         };
         if (message.data().images.length > 0) {
             message_data.type = "image";
-            message_data.content = message.data().images[0];
+            message_data.content = message.data().images;
         }
 
-        let is_reply = message.data().check != 1 ?? false;
+        let is_reply = [CHECK_TYPE.REPLY_CHAT_TEXT, CHECK_TYPE.REPLY_CHAT_IMAGES, CHECK_TYPE.REPLY_CHAT_PRODUCT].includes(message.data().check) ?? false;
         let reply_data = {
             type: "text",
             message: message.data().reply,
             images: []
         }
-        if ([3, 4, 5, 6].includes(message.data().check)) {
-            console.log()
+        if ([CHECK_TYPE.REPLY_CHAT_IMAGES].includes(message.data().check)) {
             reply_data.type = "image";
             reply_data.message = "";
             reply_data.images = message.data().replyimages;
@@ -224,11 +221,11 @@ async function renderOldRooms(room_list=[], message_nav_container) {
     let message_container_element = "";
     room_list.forEach((room) => {
         message_container_element += 
-            "<li class='row d-flex align-items-center w-100 chat-list m-0 p-0' id='" + room.id + "'>" +
-                "<div class='col-xs-2 thumbnail-user d-flex align-items-center justify-content-center'>" +
+            "<li class='row d-flex p-0 align-items-center w-100 chat-list m-0 p-0' id='" + room.id + "'>" +
+                "<div class='col-xs-2 p-2 thumbnail-user d-flex align-items-center justify-content-center'>" +
                     "<img src='" + room.customer.avatar_url + "'>" +
                 "</div>" +
-                "<div class='col-xs-10 d-flex justify-content-center flex-column'>" +
+                "<div class='col-xs-10 p-2 d-flex justify-content-center flex-column'>" +
                     "<div class='message-info d-flex justify-content-between'>" +
                         "<span class='fw-bold user-name'>" + shortenStringDisplay(room.customer.name, 12) + "</span>" +
                         "<span class='message-timestamp' data-timestamp='" + room.timestamp.seconds + "' data-unread='" + room.unread + "'>" + ((room.unread) ? ("<b>" + room.time_display + "</b>") : room.time_display) + "</span>" +
@@ -239,6 +236,7 @@ async function renderOldRooms(room_list=[], message_nav_container) {
         }
     );
     message_nav_container.innerHTML = message_container_element;
+    if (room_id) activeRoomCSS(room_id);
 }
 autoUpdateTimeRepresent();
 
@@ -258,36 +256,30 @@ message_input.onkeypress = function(event) {
     }
 };
 
-// Catch choosing room event
-document.getElementById('message-nav').addEventListener('click', function(event) {
-    let targetElement = event.target;
-    while (targetElement && targetElement !== document) {
-        if (targetElement.classList.contains("chat-list")) {
-            room_id = targetElement.id;
-            // console.log(current_room_list);
-            if (current_room_list.filter(current_room => current_room.id == room_id).length == 1) {
-                console.log("Pass")
-                $(".chat-overlay").remove();
-                for (var item of document.querySelectorAll(".chat-list")) {
-                    item.classList.remove('active');
-                }
-                targetElement.classList.add("active");
-                syncMessage(room_id);
-            } else {
-                let choice = confirm("Are you sure to enter this room?");
-                if (choice) {
-                    $(".chat-overlay").remove();
-                    for (var item of document.querySelectorAll(".chat-list")) {
-                        item.classList.remove('active');
-                    }
-                    targetElement.classList.add("active");
-                    syncMessage(room_id);
-                }
-            }
-            break;
+function activeRoomCSS(room_id) {
+    console.log(room_id);
+    $(".chat-list").removeClass('active');
+    $(".chat-list#" + room_id).addClass("active");
+    $(".header-title > span").text(customer_data.name);
+}
+
+// Handle click room
+$(document).on('click', "#message-nav .chat-list", function() {
+    room_id = $(this).prop("id");
+    // console.log(room_id);
+    if (current_room_list.filter(current_room => current_room.id == room_id).length == 1) {
+        // console.log("Pass")
+        syncMessage(room_id);
+        $(".chat-overlay").remove();
+    } else {
+        let choice = confirm("Are you sure to enter this room?");
+        if (choice) {
+            syncMessage(room_id);
+            $(".chat-overlay").remove();
         }
-        targetElement = targetElement.parentNode;
     }
+
+    resetReply();
 });
 
 $(document).on("click", "div#show-all-current", function() {
@@ -393,51 +385,64 @@ function showLessWaiting() {
 }
 
 //Handle file input
-$(document).ready(function() {
-    $('input#image').change(function() {
+$(document).ready(function () {
+    $('input#image').change(async function () {
         var allowedExtensions = /(\.jpg|\.jpeg|\.png)$/i;
         var input = this;
 
         if (input.files && input.files[0]) {
-            console.log(input.files[0])
-            // Check image file extension
-            if (allowedExtensions.test(input.files[0].name)) {
+            const options = {
+                strict: true,
+                maxWidth: 1920,
+                maxHeight: 1920,
+                quality: 0.8,
+                mimeType: 'image/jpeg',
+                success(result) {
+                    // console.log(result);
+                },
+                error(e) {
+                    console.error(e.message);
+                },
+            };
+            let promises = [];
+            const compressor = new ImageCompressor();
 
-                // Compress image
-                const options = {
-                    strict: true,
-                    maxWidth: 1920,
-                    maxHeight: 1920,
-                    quality: 0.8,
-                    mimeType: 'image/jpeg',
-                    success(result) {
-                        console.log(result);
-                        var reader = new FileReader();
-                        reader.onloadend = function(e) {
-                            uploadFile(new File([result], result.name, { type: result.type }), (url) => {
-                                if (reply.check == 4) {
-                                    reply.check = 3;
-                                    reply.images.push(url ?? "");
-                                }
-                                addMessage(url, "image");
-                            });
-                            // addMessage("/assets/image/image" + Math.floor(Math.random() * 7 + 1) + ".jpg", "image");
-                        };
-                        reader.readAsDataURL(result);
-                    },
-                    error(e) {
-                        console.error(e.message);
-                    },
-                };
+            // console.log(input.files)
 
-                new ImageCompressor(input.files[0], options);
-            } else {
-                alert('Chỉ chấp nhận file ảnh có đuôi .jpg, .jpeg hoặc .png');
-                $(this).val('');
+            Array.from(input.files).map((file, index) => {
+                // Check image file extension
+                if (allowedExtensions.test(file.name)) {
+                    // console.log(file)
+                    promises.push(compressor.compress(file, options));
+                } else {
+                    alert('Chỉ chấp nhận file ảnh có đuôi .jpg, .jpeg hoặc .png');
+                    $(this).val(null);
+                    return;
+                }
+            })
+
+            // Compress images
+            const compressedImages = await Promise.all(promises);
+            console.log(compressedImages)
+
+            // Upload compressed images
+            let image_list = [];
+            if (![CHECK_TYPE.REPLY_CHAT_TEXT, CHECK_TYPE.REPLY_CHAT_IMAGES, CHECK_TYPE.REPLY_CHAT_PRODUCT].includes(reply.check)) {
+                reply.check = CHECK_TYPE.CHAT_IMAGES;
             }
-
-            
+            for (const result of compressedImages) {
+                try {
+                    const url = await uploadFile(new File([result], result.name, { type: result.type })); // Wait for each request to complete
+                    image_list.push(url); // Push the response data to the result array
+                } catch (error) {
+                    console.log("Upload images failed: " + error); // Log any errors that occur during requests
+                }
+            }
+            // console.log(image_list)
+            addMessage(image_list, "image");
         }
+        $(this).val(null);
+        resetReply();
     });
 });
 
@@ -462,16 +467,15 @@ const colMessageByRoomId = (room_id) => {
 
 // Add new message
 function addMessage(message, message_type="text") {
+    console.log(message, reply)
     const col_chat = collection(fs, "chat_rooms_gozic", room_id, "chat");
 
     const doc_chat_data = {
         "askimg": "",
-        "chat": message,
+        "chat": message_type == "text" ? message : "đã gửi ảnh",
         "check": reply.check,
         "id": "",
-        "images": message_type == "text" ? [] : [
-            message
-        ],
+        "images": message_type == "text" ? [] : message,
         "price": 0,
         "receiverId": customer_data.id,
         "receiverName": customer_data.name,
@@ -487,12 +491,16 @@ function addMessage(message, message_type="text") {
     addDoc(col_chat, doc_chat_data);
 
     const update_room = {
-        "lastchat": message,
+        "lastchat": message_type == "text" ? message : "đã gửi ảnh",
         "lastid": system_data.id,
         "receiverAvatar": customer_data.avatar_url,
         "receiverId": customer_data.id,
         "receiverName": customer_data.name,
         "receiverRoleId": 1,
+        "senderAvatar": system_data.avatar_url,
+        "senderId": system_data.id,
+        "senderName": system_data.name,
+        "senderRoleId": 10,
         "timestamp": new Date(),
         "unread": 0,
         "threadId": ""
@@ -504,31 +512,33 @@ function addMessage(message, message_type="text") {
 
 // Sync rooms in real-time with database
 onSnapshot(query(col_rooms, orderBy('timestamp')), async (snapshot) => {
-    console.log("changed")
+    // console.log("changed")
     current_room_list = [];
     waiting_room_list = [];
     const rooms = snapshot.docs;
     // console.log(rooms)
     await Promise.all(rooms.map(async (room) => {
-        console.log(room.data());
+        // console.log(room.data());
         let room_data = room.data();
         room_data.id = room.id;
         let doc_room = await getDoc(doc(fs, 'chat_rooms_gozic', room.id));
         room_data.message_content = "<span>" + shortenStringDisplay(doc_room.data().lastchat, 18) + "</span>";
         room_data.time_display = formatTimestampDisplay(doc_room.data().timestamp.seconds);
-        if (doc_room.data().senderId == 0 || (doc_room.data().senderId == system_data.id && doc_room.data().senderName == system_data.name)) {
+        if (doc_room.data().senderId == 0 || (doc_room.data().senderId == system_data.id)) {
+            // console.log("customer is receiver");
             room_data.customer = {
                 name: doc_room.data().receiverName,
                 avatar_url: doc_room.data().receiverAvatar
             }
-        } else if (doc_room.data().receiverId == 0 || doc_room.data().receiverId == system_data.id && doc_room.data().receiverName == system_data.name) {
+        } else if (doc_room.data().receiverId == 0 || doc_room.data().receiverId == system_data.id) {
+            // console.log("customer is sender");
             room_data.customer = {
                 name: doc_room.data().senderName,
                 avatar_url: doc_room.data().senderAvatar
             }
         }
         // console.log(room_data);
-        if (room.data().participants[1] == system_data.id) {
+        if (room.data().participants.includes(system_data.id)) {
             // Auto read for current selected chat room
             if (room.id == room_id) {
                 // if (unsubscribe_message != null) unsubscribe_message();
@@ -546,8 +556,6 @@ onSnapshot(query(col_rooms, orderBy('timestamp')), async (snapshot) => {
         }
     }));
     // console.log(current_room_list, waiting_room_list)
-    // message_nav_container_current.innerHTML = "";
-    // message_nav_container_waiting.innerHTML = "";
 
     current_room_list = current_room_list.reverse();
     waiting_room_list = waiting_room_list.reverse();
@@ -568,13 +576,13 @@ function syncMessage(room_id) {
     let participants = null;
     getDoc(doc_room).then((room) => {
         if (room.exists()) {
-            if (room.data().senderId == 0 || (room.data().senderId == system_data.id && room.data().senderName == system_data.name)) {
+            if (room.data().senderId == 0 || (room.data().senderId == system_data.id)) {
                 customer_data = {
                     id: room.data().receiverId,
                     name: room.data().receiverName,
                     avatar_url: room.data().receiverAvatar
                 }
-            } else if (room.data().receiverId == 0 || room.data().receiverId == system_data.id && room.data().receiverName == system_data.name) {
+            } else if (room.data().receiverId == 0 || room.data().receiverId == system_data.id) {
                 customer_data = {
                     id: room.data().senderId,
                     name: room.data().senderName,
@@ -590,7 +598,7 @@ function syncMessage(room_id) {
                 "unread": 0
             };
             participants = update_room.participants;
-            // console.log(participants)
+            // console.log(update_room)
             avatar_list['user'] = customer_data.avatar_url;
             updateDoc(doc_room, update_room);
             // console.log(room_id);
@@ -610,6 +618,8 @@ function syncMessage(room_id) {
                 last_message = document.querySelector("#chat-history .chat-detail:last-child .chat-message:last-child");
                 renderOldMessage(messages, participants);
             })
+            
+            activeRoomCSS(room_id);
         }
     }, (error) => {
         console.log(error);
@@ -623,20 +633,27 @@ $(document).on('click', ".message-reply", function() {
     $("#reply-detail #reply-name").text(shortenStringDisplay(reply.name, 18));
     switch ($(this).data("message-type")) {
         case "image":
-            reply.check = 4;
+            reply.check = CHECK_TYPE.REPLY_CHAT_IMAGES;
             reply.reply = "";
-            reply.images = [
-                $(this).parent(".chat-message").children("img").eq(0).prop("src")
-            ];
+            reply.images = $(this).parent(".chat-message").find("img").map(function() {
+                return $(this).prop("src");
+            }).get();
             $("#reply-detail #reply-content").text("[Hình ảnh]");
-            $("#reply-image").addClass('d-show').prop("src", $(this).parent(".chat-message").children("img").eq(0).prop("src"));
+            let reply_images = "";
+            reply.images.forEach((img_src, index) => {
+                reply_images += 
+                "<div class='col-6 p-1 d-flex align-items-center justify-content-center'>" +
+                    "<img src='" + img_src + "' class='img-fluid'>" +
+                "</div>";
+            })
+            $("#reply-images").html(reply_images).addClass('d-show');
             break;
         case "text":
-            reply.check = 2;
+            reply.check = CHECK_TYPE.REPLY_CHAT_TEXT;
             reply.reply = $(this).parent(".chat-message").children("span").eq(0).text();
             reply.images = [];
             $("#reply-detail #reply-content").text(shortenStringDisplay(reply.reply, 30));
-            $("#reply-image").removeClass('d-show');
+            $("#reply-images").removeClass('d-show');
             $("#chat-history").removeClass('with-reply');
             break;
     }
@@ -646,11 +663,41 @@ $(document).on('click', ".message-reply", function() {
 function resetReply() {
     reply.id = "";
     reply.reply = "";
-    reply.check = 1;
-    $("#reply-image").removeClass('d-show');
+    reply.check = CHECK_TYPE.CHAT_TEXT;
+    reply.images = [];
+    reply.name = "";
+    $("#reply-images").removeClass('d-show');
     $("#chat-history").removeClass('with-reply');
     $("#chat-reply").removeClass('d-flex');
 }
 $(document).on('click', "#reply-cancel", function() {
     resetReply();
+})
+
+// Handle click image
+$(document).on('click', '.images-message > div', function() {
+    $("body").append(popupImage($(this).children("img").eq(0).prop("src")));
+})
+$(document).on('click', '.chat-message > img', function() {
+    console.log($(this), $(this).prop("src"))
+    $("body").append(popupImage($(this).prop("src")));
+})
+function popupImage(img_src) {
+    return "<div id='popup-image' style='position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; margin: 0; padding: 0; display: flex; align-items: center; justify-content: center; background-color: rgba(225, 225, 225, 0.6); z-index: 9999;'>" +
+        "<div class='container-fluid h-100 p-5 d-flex align-items-center justify-content-center'>" +
+            "<img src='" + img_src + "' style='max-width: 100%; max-height: 100%;'>" +
+        "</div>" +
+        "<div style='position: absolute; top: 2rem; right: 2rem'>" +
+            "<div>" +
+                "<button id='close-popup-image' style='width: 36px; height: 36px; border: 1px solid lightgray; border-radius: 50%; background: white; display: flex; align-items: center; justify-content: center;'><i class='fas fa-times' style='font-size: x-large;'></i></button>" +
+            "</div>" +
+        "</div>" +
+    "</div>";
+}
+$(document).on('click', 'button#close-popup-image', function() {
+    $("div#popup-image").remove();
+})
+
+$(document).on('click', '#chat-input, .chat-list, .message-reply', function() {
+    $("textarea#message").focus();
 })

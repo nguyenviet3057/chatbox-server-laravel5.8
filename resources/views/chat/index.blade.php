@@ -14,8 +14,17 @@
         .p-0 {
             padding: 0;
         }
+        .p-1 {
+            padding: 0.25rem !important;
+        }
+        .p-2 {
+            padding: 0.5rem !important;
+        }
         .m-0 {
             margin: 0;
+        }
+        .m-1 {
+            margin: 0.25rem !important;
         }
         .mb-0 {
             margin-bottom: 0;
@@ -35,6 +44,19 @@
         .flex-column {
             flex-direction: column;
         }
+        .row {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: wrap;
+        }
+        .row > * {
+            flex-shrink: 0;
+            max-width: 100%;
+        }
+        .col-6 {
+            flex: 0 0 auto;
+            width: 50%;
+        }
         .align-items-center {
             align-items: center;
         }
@@ -49,6 +71,10 @@
         }
         .fw-bold {
             font-weight: bold;
+        }
+        .img-fluid {
+            max-width: 100%;
+            height: auto;
         }
 
         /*
@@ -84,7 +110,7 @@
             width: 100%;
             height: 24px;
             vertical-align: middle;
-            background-color: #555;
+            background-color: #357ca5;
             color: white;
             display: flex;
             align-items: center;
@@ -94,7 +120,9 @@
         #message-nav .thumbnail-user img {
             width: 36px;
             height: 36px;
-            border-radius: 50%;
+            /* border-radius: 50%; */
+            max-width: 100%;
+            object-fit: contain;
         }
 
         #message-nav > div {
@@ -142,14 +170,21 @@
 
         #chat-header {
             top: 0px;
-            height: 32px;
-            background-color: gray;
+            height: 48px;
+            background-color: #3c8dbc;
+            display: flex;
+            align-items: center;
+            padding-left: 1rem;
+        }
+        #chat-header .header-title > span {
+            color: white !important;
+            font-weight: bold;
         }
 
         #chat-history-container {
             position: relative;
             width: 100%;
-            height: calc(100% - 32px - 32px);
+            height: calc(100% - 50px - 48px);
             border-top: 1px solid lightgray;
             border-bottom: 1px solid lightgray;
         }
@@ -163,6 +198,11 @@
             padding: 0px 10px;
             height: fit-content;
             overflow-y: auto;
+        }
+
+        #chat-history.with-reply {
+            max-height: calc(100% - 56px);
+            bottom: 56px;
         }
 
         #chat-history .chat-detail {
@@ -197,13 +237,17 @@
 
         .chat-message-list div.reply-note {
             display: flex;
-            flex-direction: column;
+            /* flex-direction: column; */
             margin-top: 3px;
+        }
+        .chat-message-list div.reply-note.images-message {
+            max-width: 100px; /* .chat-message-list div.reply-note img -> max-width = 50px; */
         }
         .chat-user .chat-message-list div.reply-note {
             margin-left: 5px;
         }
         .chat-system .chat-message-list div.reply-note {
+            justify-content: flex-end;
             margin-right: 5px;
         }
         .chat-message-list div.reply-note > span {
@@ -224,9 +268,10 @@
         .chat-message-list div.reply-note img {
             height: 50px;
             width: fit-content;
-            max-width: 50px;
+            /* max-width: 50px; */
             border-radius: 3px;
             opacity: 0.6;
+            object-fit: contain;
         }
 
         .chat-system .chat-message-list > div.w-100 {
@@ -235,7 +280,7 @@
             align-items: flex-end;
         }
 
-        #chat-history .chat-message:has(> div:first-child) {
+        #chat-history .chat-message:has(> div:first-child:not(:has(> img))) {
             position: relative;
             padding: 4px 8px;
             margin: 0px 5px 2px 5px;
@@ -277,16 +322,47 @@
         #chat-history .chat-message:has(> img:first-child) {
             position: relative;
             margin: 0px 5px 2px 5px;
+            border-radius: 8px;
             min-height: 28px;
             max-width: 64%;
             width: fit-content;
             display: flex;
             align-items: center;
         }
+        #chat-history .chat-message:has(> img:first-child) img {
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        
+        #chat-history .chat-message:has(> div.images-message:first-child) {
+            position: relative;
+            margin: 0px 5px 2px 5px;
+            min-height: 28px;
+            max-width: 64%;
+            width: fit-content;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+        }
+
+        .system-message div.images-message {
+            justify-content: flex-end;
+        }
+
+        #chat-history .chat-message div.images-message > div {
+            border-radius: 8px;
+            border: 1px solid #357ca5;
+            cursor: pointer;
+            background-color: white;
+        }
+
+        #chat-history .chat-message div.images-message > div:hover {
+            background-color: #f6f6f6;
+        }
 
         #chat-history .chat-message img {
             width: 100%;
-            border-radius: 8px;
+            /* border-radius: 8px; */
             max-height: 160px;
             min-height: 28px;
             object-fit: contain;
@@ -294,7 +370,7 @@
 
         #chat-input form {
             position: relative;
-            min-height: 32px;
+            min-height: 50px;
             background-color: white;
             display: flex;
             align-items: center;
@@ -305,7 +381,7 @@
         #chat-input textarea {
             width: 100%;
             min-height: fit-content;
-            max-height: 50px;
+            max-height: 48px;
             padding: 0px 42px 0px 16px;
             outline: none !important;
             border: none !important;
@@ -346,7 +422,7 @@
         }
 
         .chat-widget-container button:hover {
-            color: green;
+            color: #3c8dbc;
             cursor: pointer;
         }
         
@@ -374,7 +450,7 @@
             bottom: 0;
             height: 56px;
             width: 100%;
-            background-color: #f7e3b4;
+            background-color: rgba(60, 141, 188, 0.25);
             padding: 10px 15px;
             border-top-left-radius: 8px;
             border-top-right-radius: 8px;
@@ -392,19 +468,23 @@
             display: flex;
             flex-direction: row;
             align-items: center;
-            border-left: 1px solid #f9bd43;
+            border-left: 1px solid #3c8dbc;
             padding: 0px 10px;
         }
-        #chat-reply-container #reply-image {
+        #chat-reply-container #reply-images {
             height: 100%;
             width: auto;
             max-width: 80px;
-            object-fit: contain;
             margin-right: 10px;
             display: none;
+            overflow: hidden;
+            border-radius: 3px;
+            border: 1px solid #f7e3b4;
+            cursor: pointer;
+            background-color: white;
         }
-        #chat-reply-container #reply-image.d-show {
-            display: block;
+        #chat-reply-container #reply-images.d-show {
+            display: flex;
         }
         #chat-reply-container #reply-detail {
             display: flex;
@@ -449,14 +529,17 @@
         <div class="col col-xs-8 m-0 p-0 h-100" id="message-detail">
             <div class="chat-container w-100 h-100">
                 <div id="chat-header">
-                    <div class="header-title"></div>
+                    <div class="header-title">
+                        <span></span>
+                    </div>
                     <div class="header-function"></div>
                 </div>
                 <div id="chat-history-container">
                     <div id="chat-history"></div>
                     <div id="chat-reply">
                         <div id="chat-reply-container">
-                            <img src="" id="reply-image" class="">
+                            <div id="reply-images" class="row images-message m-0">
+                            </div>
                             <div id="reply-detail">
                                 <span id="reply-name" class="fw-bold"></span>
                                 <span id="reply-content"></span>
@@ -473,7 +556,7 @@
                         <div class="chat-widget-container">
                             <button type="button">
                                 <i class="fas fa-image"></i>
-                                <input type="file" name="image" id="image" accept=".jpg, .jpeg, .png">
+                                <input type="file" name="image" id="image" accept=".jpg, .jpeg, .png" multiple>
                             </button>
                             <!-- <button type="button">
                                 <i class="fa-solid fa-paperclip"></i>
@@ -498,7 +581,7 @@
             email: "{{ $user_data->email }}",
             phone: "{{ $user_data->phone }}",
             gender: {{ $user_data->gender }},
-            avatarUrl: "{{ $user_data->avatarUrl }}",
+            avatar_url: "{{ $user_data->avatar_url }}",
         }
     </script>
     <script src="{{ asset('assets/js/utils.js') }}"></script>
