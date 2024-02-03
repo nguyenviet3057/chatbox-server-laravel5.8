@@ -1,6 +1,6 @@
 function formatTimestampDisplay(time) {
     let time_diff_s = Math.floor(new Date().getTime()/1000 - time);
-    // console.log(time_diff_s)
+    // console.log(time, time_diff_s)
     let represent = "";
     let time_represents = [
         {
@@ -36,6 +36,7 @@ function formatTimestampDisplay(time) {
             "represent": "just now"
         }
     ];
+    if (time_diff_s < 0) return time_represents[time_represents.findIndex(time_represent => time_represent.time == 0)].represent;
     if (60*60*36 <= time_diff_s) {
         let date = new Date(time*1000);
         return date.getFullYear() + "/" + (date.getMonth() < 9 ? "0" + (date.getMonth() + 1) : (date.getMonth() + 1)) + "/" + (date.getDate() < 10 ? "0" + date.getDate() : date.getDate());
@@ -58,6 +59,7 @@ function autoUpdateTimeRepresent() {
 }
 
 function shortenStringDisplay(text, length) {
+    if (length == -1) return text;
     text = '' + text;
     if (text.length <= length) return text;
     return text.substr(0, length) + "...";

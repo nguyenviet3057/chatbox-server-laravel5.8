@@ -1,9 +1,10 @@
-$(document).ready(function() {
-    $("body").append(
+window.onload = function() {
+    console.log("abc")
+    document.querySelector("body").innerHTML += (
         "<div id='gozic-widget'>" +
             "<iframe src='https://appbanhang.gozic.vn/module/chat-firebase/iframe' width='60' height='60' frameborder='0' allowfullscreen></iframe>" +
         "</div>");
-    $("head").append(
+    document.querySelector("head").innerHTML += (
         "<style>" +
             "#gozic-widget {" +
                 "position: fixed;" +
@@ -37,11 +38,13 @@ $(document).ready(function() {
     let showChat = false;
     window.onmessage = function(e) {
         if (e.data == 'showChat' && !showChat) {
-            $("div#gozic-widget > iframe").prop("width", "440").prop("height", "813");
+            document.querySelector("div#gozic-widget > iframe").setAttribute("width", "440");
+            document.querySelector("div#gozic-widget > iframe").setAttribute("height", "813");
             showChat = true;
         } else if (e.data == 'hideChat' && showChat) {
-            $("div#gozic-widget > iframe").prop("width", "60").prop("height", "60");
+            document.querySelector("div#gozic-widget > iframe").setAttribute("width", "60");
+            document.querySelector("div#gozic-widget > iframe").setAttribute("height", "60");
             showChat = false;
         }
     };
-})
+}

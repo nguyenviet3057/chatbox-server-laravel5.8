@@ -111,7 +111,7 @@ function renderMessage(message, is_reply=false, reply, avatar_url = avatar_list)
             message_content = "<div>" + md.render(message.content) + "</div>";
             break;
         default:
-            message_content = "<span>" + message.content + "</span>";
+            message_content = "<span>" + message.content.replace(/\n/g,"<br>") + "</span>";
             break;
     }
 
@@ -225,9 +225,9 @@ async function renderOldRooms(room_list=[], message_nav_container) {
                 "<div class='col-xs-2 p-2 thumbnail-user d-flex align-items-center justify-content-center'>" +
                     "<img src='" + room.customer.avatar_url + "'>" +
                 "</div>" +
-                "<div class='col-xs-10 p-2 d-flex justify-content-center flex-column'>" +
-                    "<div class='message-info d-flex justify-content-between'>" +
-                        "<span class='fw-bold user-name'>" + shortenStringDisplay(room.customer.name, 12) + "</span>" +
+                "<div class='col-xs-10 p-2 h-100 position-relative d-flex justify-content-between flex-column'>" +
+                    "<div class='message-info d-flex justify-content-between position-relative'>" +
+                        "<span class='fw-bold user-name'>" + shortenStringDisplay(room.customer.name, -1) + "</span>" +
                         "<span class='message-timestamp' data-timestamp='" + room.timestamp.seconds + "' data-unread='" + room.unread + "'>" + ((room.unread) ? ("<b>" + room.time_display + "</b>") : room.time_display) + "</span>" +
                     "</div>" +
                     "<span class='message-content'>" + ((room.unread) ? ("<b>" + room.message_content + "</b>") : room.message_content) + "</span>" +
@@ -253,11 +253,12 @@ message_input.onkeypress = function(event) {
     if(event.which === 13 && !event.shiftKey) {
         event.preventDefault();
         sendMessage(event);
+        message_input.style.height = default_input_height + "px";
     }
 };
 
 function activeRoomCSS(room_id) {
-    console.log(room_id);
+    // console.log(room_id);
     $(".chat-list").removeClass('active');
     $(".chat-list#" + room_id).addClass("active");
     $(".header-title > span").text(customer_data.name);
@@ -467,7 +468,7 @@ const colMessageByRoomId = (room_id) => {
 
 // Add new message
 function addMessage(message, message_type="text") {
-    console.log(message, reply)
+    // console.log(message, reply)
     const col_chat = collection(fs, "chat_rooms_gozic", room_id, "chat");
 
     const doc_chat_data = {
@@ -507,11 +508,36 @@ function addMessage(message, message_type="text") {
     };
     updateDoc(docRoomByRoomId(room_id), update_room);
 
+    // Send Cloud Messaging Notification to mobile device
+    let data = {
+        "notification": {
+            "title": system_data.name, 
+            "body": message_type == "text" ? message : "đã gửi ảnh"
+        },
+        "priority": "high",
+        "data": {
+            "click_action":"test",
+            "id": "1",
+            "status": "done",
+            "message" : message_type == "text" ? message : "đã gửi ảnh"
+        },
+        "to": customer_data.token ?? ""
+    };
+    $.post({
+        url: "https://fcm.googleapis.com/fcm/send",
+        contentType: 'application/json; charset=utf-8',
+        headers: {
+            Authorization: "key=AAAA9XMRnyQ:APA91bEoAtbVA7Uq47FtyQa71SpBMdVhfWT3sKeVODNH9izm4yI8pQJ3oTdDSf_FGC4rVcaXEJjZFzfTyC6izycPetPZlx0HSghNgJ5zbzN9XWYkLVe_zMEfj28l52eeWE4Z_LmFpIJ-",
+        },
+        dataType: 'json',
+        data: JSON.stringify(data)
+    })
+
     resetReply();
 }
 
 // Sync rooms in real-time with database
-onSnapshot(query(col_rooms, orderBy('timestamp', 'desc'), where("participants", "array-contains", system_data.id)), async (snapshot) => {
+onSnapshot(query(col_rooms, orderBy("timestamp", "desc"), where("participants", "array-contains", system_data.id)), async (snapshot) => {
     // console.log("changed")
     current_room_list = [];
     waiting_room_list = [];
@@ -522,7 +548,7 @@ onSnapshot(query(col_rooms, orderBy('timestamp', 'desc'), where("participants", 
         let room_data = room.data();
         room_data.id = room.id;
         let doc_room = await getDoc(doc(fs, 'chat_rooms_gozic', room.id));
-        room_data.message_content = "<span>" + shortenStringDisplay(doc_room.data().lastchat, 18) + "</span>";
+        room_data.message_content = "<span>" + shortenStringDisplay(doc_room.data().lastchat, -1) + "</span>";
         room_data.time_display = formatTimestampDisplay(doc_room.data().timestamp.seconds);
         if (doc_room.data().senderId == 0 || (doc_room.data().senderId == system_data.id)) {
             // console.log("customer is receiver");
@@ -621,6 +647,15 @@ function syncMessage(room_id) {
             })
             
             activeRoomCSS(room_id);
+
+            // Get token for sending notification to mobile device
+            let doc_user_gozic = doc(fs, 'users_gozic', customer_data.id);
+            getDoc(doc_user_gozic).then((user_gozic) => {
+                if (user_gozic.exists()) {
+                    customer_data.token = user_gozic.data().token;
+                    console.log(customer_data);
+                }
+            })
         }
     }, (error) => {
         console.log(error);

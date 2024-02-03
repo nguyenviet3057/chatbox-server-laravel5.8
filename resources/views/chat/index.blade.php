@@ -69,6 +69,9 @@
         .position-absolute {
             position: absolute;
         }
+        .position-relative {
+            position: relative;
+        }
         .fw-bold {
             font-weight: bold;
         }
@@ -140,8 +143,29 @@
             cursor: pointer;
         }
 
-        .chat-list.active {
-            background-color: #f2f2f2;
+        .chat-list.active, .chat-list.active .message-timestamp {
+            background-color: #f2f2f2 !important;
+        }
+        .chat-list .message-info .user-name {
+            position: absolute;
+            top: 0;
+            left: 0;
+            white-space: nowrap;
+            max-width: 100%;
+            overflow: hidden;
+        }
+        .chat-list .message-info .message-timestamp {
+            position: absolute;
+            top: 0;
+            right: 0;
+            padding-left: 10px;
+            background-color: white;
+            white-space: nowrap;
+        }
+        .chat-list .message-content {
+            white-space: nowrap;
+            max-width: 100%;
+            overflow: hidden;
         }
 
         /*
