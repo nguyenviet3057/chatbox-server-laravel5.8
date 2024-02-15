@@ -44,6 +44,9 @@
         .flex-column {
             flex-direction: column;
         }
+        .flex-row {
+            flex-direction: row;
+        }
         .row {
             display: flex;
             flex-direction: row;
@@ -186,7 +189,7 @@
         .chat-container {
             /* width: 320px; */
             /* height: 360px; */
-            background-color: #e8e8e8;
+            background-color: white;
             display: flex;
             flex-direction: column;
             /* border: 1px solid lightgray; */
@@ -198,7 +201,8 @@
             background-color: #3c8dbc;
             display: flex;
             align-items: center;
-            padding-left: 10px;
+            padding: 0px 10px;
+            justify-content: space-between;
         }
         #chat-header .header-title > span {
             color: white !important;
@@ -304,8 +308,14 @@
             align-items: flex-end;
         }
 
-        #chat-history .chat-message:has(> div:first-child:not(:has(> img))) {
+        #chat-history .chat-message {
             position: relative;
+            width: fit-content;
+            display: flex;
+            align-items: center;
+        }
+
+        #chat-history .chat-message:has(> div:first-child:not(:has(> img))) {
             padding: 4px 8px;
             margin: 0px 5px 2px 5px;
             background-color: #f2f2f2;
@@ -313,9 +323,6 @@
             border-radius: 8px;
             min-height: 28px;
             max-width: 64%;
-            width: fit-content;
-            display: flex;
-            align-items: center;
         }
 
         #chat-history .chat-message div {
@@ -327,16 +334,12 @@
         }
 
         #chat-history .chat-message:has(> span:first-child) {
-            position: relative;
             padding: 4px 8px;
             margin: 0px 5px 2px 5px;
             background-color: #f2f2f2;
             border-radius: 8px;
             min-height: 28px;
             max-width: 64%;
-            width: fit-content;
-            display: flex;
-            align-items: center;
         }
 
         #chat-history .chat-message span {
@@ -344,29 +347,62 @@
         }
 
         #chat-history .chat-message:has(> img:first-child) {
-            position: relative;
             margin: 0px 5px 2px 5px;
             border-radius: 8px;
             min-height: 28px;
             max-width: 64%;
-            width: fit-content;
-            display: flex;
-            align-items: center;
         }
         #chat-history .chat-message:has(> img:first-child) img {
             border-radius: 8px;
             cursor: pointer;
+            border: 1px solid #357ca5;
+            border-radius: 8px;
         }
         
         #chat-history .chat-message:has(> div.images-message:first-child) {
-            position: relative;
             margin: 0px 5px 2px 5px;
             min-height: 28px;
             max-width: 64%;
-            width: fit-content;
-            display: flex;
-            align-items: center;
             justify-content: flex-end;
+        }
+
+        #chat-history .chat-message:has(> div.chat-product:first-child) {
+            flex-direction: column;
+            align-items: flex-start;
+            justify-content: center;
+            margin: 0px 5px 2px 5px;
+            padding: 4px 8px;
+            background-color: #f2f2f2;
+            border-radius: 8px;
+            min-height: 28px;
+            max-width: 64%;
+        }
+        .chat-message:has(> div.chat-product:first-child) > div.chat-product > div {
+            margin-left: 8px;
+        }
+        .chat-message:has(> div.chat-product:first-child) .product-title {
+            font-weight: bold;
+            width: fit-content;
+        }
+        .chat-message:has(> div.chat-product:first-child) .product-price span {
+            width: fit-content;
+        }
+        .chat-message:has(> div.chat-product:first-child) img {
+            max-height: 100px;
+            width: auto;
+            object-fit: contain;
+        }
+        .chat-message:has(> div.chat-product:first-child) > span {
+            margin-top: 4px;
+        }
+
+        #chat-history .chat-message:has(> div.chat-markdown:first-child) {
+            margin: 0px 5px 2px 5px;
+            padding: 4px 8px;
+            background-color: #f2f2f2;
+            border-radius: 8px;
+            min-height: 28px;
+            max-width: 64%;
         }
 
         .system-message div.images-message {
@@ -449,6 +485,12 @@
             color: #3c8dbc;
             cursor: pointer;
         }
+
+        @media screen and (max-width: 576px) {
+            #chat-history .chat-message {
+                max-width: 90% !important;
+            }
+        }
         
         /*
         *   Reply section CSS
@@ -521,6 +563,74 @@
             height: fit-content;
             margin-right: 12px;
         }
+
+        /* Switch toggle button for Chat bot */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 24px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            -webkit-transition: .4s;
+            transition: .4s;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            -webkit-transition: .4s;
+            transition: .4s;
+        }
+
+        input:checked+.slider {
+            background-color: #01ff70;
+        }
+
+        input:focus+.slider {
+            box-shadow: 0 0 1px #01ff70;
+        }
+
+        input:checked+.slider:before {
+            -webkit-transform: translateX(16px);
+            -ms-transform: translateX(16px);
+            transform: translateX(16px);
+        }
+
+        .slider.round {
+            border-radius: 34px;
+        }
+
+        .slider.round:before {
+            border-radius: 50%;
+        }
+
+        .chat-bot-toggle > span {
+            color: white !important;
+            margin-right: 0.5rem;
+        }
+        .chat-bot-toggle > label {
+            margin: 0;
+        }
     </style>
 @stop
 
@@ -556,7 +666,15 @@
                     <div class="header-title">
                         <span></span>
                     </div>
-                    <div class="header-function"></div>
+                    <div class="header-function">
+                        <div class="chat-bot-toggle d-flex align-items-center">
+                            <span>Chat Bot</span>
+                            <label class="switch">
+                                <input id="toggle-bot" type="checkbox">
+                                <span class="slider round"></span>
+                            </label>
+                        </div>
+                    </div>
                 </div>
                 <div id="chat-history-container">
                     <div id="chat-history"></div>

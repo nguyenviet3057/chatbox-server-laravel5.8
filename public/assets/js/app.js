@@ -21,6 +21,10 @@ const analytics = getAnalytics(app);
 // var db = getDatabase(app);
 var auth = getAuth(app);
 var fs = getFirestore(app);
+
+let bot_entered_message = "(Trợ lý ảo vừa tham gia)";
+let bot_left_message = "(Trợ lý ảo vừa rời đi, bạn đang chat trực tiếp với nhân viên)";
+    
 let customer_data = {};
 let avatar_list = {
     "admin": "/assets/image/icon-gozic.png",
@@ -67,14 +71,18 @@ const CHECK_TYPE = {
     REPLY_CHAT_TEXT: 4,
     REPLY_CHAT_IMAGES: 5,
     REPLY_CHAT_PRODUCT: 6,
+    CHAT_BOT: 7
 }
+var room_bot_on = false;
 
 var reply = {
     id: "",
     check: 1,
     reply: "",
     name: "",
-    images: []
+    images: [],
+    product_title: "",
+    product_image: ""
 }
 
 // scrollToLastMessage();
@@ -107,8 +115,20 @@ function renderMessage(message, is_reply=false, reply, avatar_url = avatar_list)
                 message_content += "</div>";
             }
             break;
+        case "product":
+            message_content = "<div class='chat-product w-100 d-flex flex-row align-items-center'>" +
+                    "<img class='col-xs-3 p-0' src='" + message.product_image + "'>" +
+                    "<div class='col-xs-9 p-0 d-flex flex-column w-100'>" +
+                        "<span class='product-title'>" + message.product_title + "</span>" +
+                        "<div class='product-price d-flex flex-row'>" +
+                            "<span>Giá: " + commafy(message.product_price) + "VND/Cái</span>" +
+                        "</div>" +
+                    "</div>" +
+                "</div>" + 
+                "<span>" + message.content.replace(/\n/g,"<br>") + "</span>";
+            break;
         case "markdown":
-            message_content = "<div>" + md.render(message.content) + "</div>";
+            message_content = "<div class='chat-markdown'>" + md.render(message.content) + "</div>";
             break;
         default:
             message_content = "<span>" + message.content.replace(/\n/g,"<br>") + "</span>";
@@ -117,16 +137,27 @@ function renderMessage(message, is_reply=false, reply, avatar_url = avatar_list)
 
     let reply_content = "";
     if (is_reply) {
-        if (reply.type == "text") reply_content = "<div class='reply-note'><span>" + shortenStringDisplay(reply.message, 30) + "</span></div>";
-        else {
-            reply_content = "<div class='reply-note row w-100 images-message'>";
-            reply.images.forEach((img_src, index) => {
-                reply_content +=
-                "<div class='col-6 p-1 d-flex align-items-center justify-content-center'>" +
-                    "<img src='" + img_src + "' class='img-fluid'>" +
+        switch (reply.type) {
+            case "image":
+                reply_content = "<div class='reply-note row w-100 images-message'>";
+                reply.images.forEach((img_src, index) => {
+                    reply_content +=
+                    "<div class='col-6 p-1 d-flex align-items-center justify-content-center'>" +
+                        "<img src='" + img_src + "' class='img-fluid'>" +
+                    "</div>";
+                })
+                reply_content += "</div>";
+                break;
+            case "text":
+                reply_content = "<div class='reply-note'><span>" + shortenStringDisplay(reply.message, 30) + "</span></div>";
+                break;
+            case "product":
+                console.log(reply);
+                reply_content = "<div class='reply-note d-flex flex-column'>" +
+                    "<img class='col-xs-4 p-0' src='" + reply.product_image + "'>" +
+                    "<span class='product-title col-xs-8'>" + reply.product_title + "</span>" +
                 "</div>";
-            })
-            reply_content += "</div>";
+                break;
         }
     }
     // console.log(message_content);
@@ -167,6 +198,14 @@ function renderMessage(message, is_reply=false, reply, avatar_url = avatar_list)
 // Re-render old messages
 function renderOldMessage(messages, participants=[]) {
     // console.log(messages, participants);
+    if (room_bot_on) {
+        // console.log("bot on")
+        $("#toggle-bot").prop("checked", true);
+    } else {
+        // console.log("bot off")
+        $("#toggle-bot").prop("checked", false);
+    }
+
     messages.forEach((message) => {
         // console.log(message.data())
         let message_data = {
@@ -179,6 +218,16 @@ function renderOldMessage(messages, participants=[]) {
             message_data.type = "image";
             message_data.content = message.data().images;
         }
+        if (message.data().check == CHECK_TYPE.CHAT_PRODUCT) {
+            message_data.type = "product";
+            message_data.product_image = message.data().askimg;
+            message_data.product_title = message.data().title;
+            message_data.product_price = message.data().price;
+            message_data.content = message.data().chat;
+        }
+        if (message.data().check == CHECK_TYPE.CHAT_BOT) {
+            message_data.type = "markdown";
+        }
 
         let is_reply = [CHECK_TYPE.REPLY_CHAT_TEXT, CHECK_TYPE.REPLY_CHAT_IMAGES, CHECK_TYPE.REPLY_CHAT_PRODUCT].includes(message.data().check) ?? false;
         let reply_data = {
@@ -190,6 +239,12 @@ function renderOldMessage(messages, participants=[]) {
             reply_data.type = "image";
             reply_data.message = "";
             reply_data.images = message.data().replyimages;
+        }
+        if (message.data().check == CHECK_TYPE.REPLY_CHAT_PRODUCT) {
+            reply_data.type = "product";
+            reply_data.product_title = message.data().title;
+            reply_data.product_image = message.data().askimg;
+            console.log(reply_data)
         }
         switch (message.data().senderId) {
             case 0:
@@ -267,19 +322,22 @@ function activeRoomCSS(room_id) {
 // Handle click room
 $(document).on('click', "#message-nav .chat-list", function() {
     room_id = $(this).prop("id");
+    syncMessage(room_id);
+    $(".chat-overlay").remove();
+    
     // console.log(room_id);
-    if (current_room_list.filter(current_room => current_room.id == room_id).length == 1) {
-        // console.log("Pass")
-        syncMessage(room_id);
-        $(".chat-overlay").remove();
-    } else {
-        let choice = confirm("Are you sure to enter this room?");
-        if (choice) {
-            syncMessage(room_id);
-            $(".chat-overlay").remove();
-        }
-    }
-
+    // if (current_room_list.filter(current_room => current_room.id == room_id).length == 1) {
+    //     // console.log("Pass")
+    //     syncMessage(room_id);
+    //     $(".chat-overlay").remove();
+    // } else {
+    //     let choice = confirm("Are you sure to enter this room?");
+    //     if (choice) {
+    //         syncMessage(room_id);
+    //         $(".chat-overlay").remove();
+    //     }
+    // }
+            
     resetReply();
 });
 
@@ -472,7 +530,7 @@ function addMessage(message, message_type="text") {
     const col_chat = collection(fs, "chat_rooms_gozic", room_id, "chat");
 
     const doc_chat_data = {
-        "askimg": "",
+        "askimg": reply.product_image,
         "chat": message_type == "text" ? message : "đã gửi ảnh",
         "check": reply.check,
         "id": "",
@@ -487,7 +545,7 @@ function addMessage(message, message_type="text") {
         "senderName": system_data.name,
         "senderPhone": system_data.phone,
         "timestamp": new Date(),
-        "title": ""
+        "title": reply.product_title
     };
     addDoc(col_chat, doc_chat_data);
 
@@ -578,7 +636,8 @@ onSnapshot(query(col_rooms, orderBy("timestamp", "desc"), where("participants", 
                 current_room_list.push(room_data);
             }
         } else {
-            waiting_room_list.push(room_data);
+            current_room_list.push(room_data);
+            // waiting_room_list.push(room_data);
         }
     }));
     // console.log(current_room_list, waiting_room_list)
@@ -616,6 +675,8 @@ function syncMessage(room_id) {
                     avatar_url: room.data().senderAvatar
                 }
             }
+
+            room_bot_on = (room.data().threadId && room.data().threadId != "") ? true : false;
         
             const update_room = {
                 "participants": [
@@ -653,7 +714,7 @@ function syncMessage(room_id) {
             getDoc(doc_user_gozic).then((user_gozic) => {
                 if (user_gozic.exists()) {
                     customer_data.token = user_gozic.data().token;
-                    console.log(customer_data);
+                    // console.log(customer_data);
                 }
             })
         }
@@ -692,6 +753,17 @@ $(document).on('click', ".message-reply", function() {
             $("#reply-images").removeClass('d-show');
             $("#chat-history").removeClass('with-reply');
             break;
+        case "product":
+            reply.check = CHECK_TYPE.REPLY_CHAT_PRODUCT;
+            reply.reply = "";
+            $("#reply-detail #reply-content").text("[Sản phẩm]");
+            reply.product_title = $(this).parent(".chat-message").children(".chat-product").children("div").children(".product-title").eq(0).text(); 
+            reply.product_image = $(this).parent(".chat-message").children(".chat-product").children("img").eq(0).prop("src");
+            // console.log(reply);
+            $("#reply-images").removeClass('d-show');
+            $("#chat-history").removeClass('with-reply');
+            break;
+
     }
     $("#chat-history").addClass('with-reply');
     $("#chat-reply").addClass('d-flex');
@@ -702,6 +774,8 @@ function resetReply() {
     reply.check = CHECK_TYPE.CHAT_TEXT;
     reply.images = [];
     reply.name = "";
+    reply.product_title = "";
+    reply.product_image = "";
     $("#reply-images").removeClass('d-show');
     $("#chat-history").removeClass('with-reply');
     $("#chat-reply").removeClass('d-flex');
@@ -736,4 +810,116 @@ $(document).on('click', 'button#close-popup-image', function() {
 
 $(document).on('click', '#chat-input, .chat-list, .message-reply', function() {
     $("textarea#message").focus();
+})
+
+// Handle toggle Chat bot
+$(document).on('change', '#toggle-bot', function() {
+    if (room_id == null) {
+        alert("Room not found");
+        return;
+    }
+
+    if ($("#toggle-bot").prop("checked")) {
+        room_bot_on = true;
+        $.post({
+            url: "https://api.openai.com/v1/threads",
+            headers: {
+                'Authorization': 'Bearer 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',
+                'Content-Type': 'application/json; charset=utf-8',
+                'OpenAI-Beta': 'assistants=v1',
+            },
+            success: function(result) {
+                console.log(result);
+                const col_chat = collection(fs, "chat_rooms_gozic", room_id, "chat");
+                const doc_chat_data = {
+                    "askimg": "",
+                    "chat": bot_entered_message,
+                    "check": CHECK_TYPE.CHAT_BOT,
+                    "id": "",
+                    "images": [],
+                    "price": 0,
+                    "receiverId": customer_data.id,
+                    "receiverName": customer_data.name,
+                    "receiverToken": "",
+                    "reply": "",
+                    "replyimages": [],
+                    "senderId": system_data.id,
+                    "senderName": system_data.name,
+                    "senderPhone": system_data.phone,
+                    "timestamp": new Date(),
+                    "title": ""
+                }
+                addDoc(col_chat, doc_chat_data);
+
+                const update_room = {
+                    "lastchat": bot_entered_message,
+                    "lastid": system_data.id,
+                    "participants": [
+                        customer_data.id,
+                        system_data.id
+                    ],
+                    "receiverAvatar": customer_data.avatar_url,
+                    "receiverId": customer_data.id,
+                    "receiverName": customer_data.name,
+                    "receiverRoleId": 1,
+                    "senderAvatar": system_data.avatar_url,
+                    "senderId": system_data.id,
+                    "senderName": system_data.name,
+                    "senderRoleId": 10,
+                    "timestamp": new Date(),
+                    "unread": 0,
+                    "threadId": result.id
+                };
+                updateDoc(docRoomByRoomId(room_id), update_room);
+            }, error: function(error) {
+                alert("Failed to enable bot");
+                $("#toggle-bot").prop("checked", false);
+                room_bot_on = false;
+            }
+        })
+    } else {
+        room_bot_on = false;
+        const col_chat = collection(fs, "chat_rooms_gozic", room_id, "chat");
+        const doc_chat_data = {
+            "askimg": "",
+            "chat": bot_left_message,
+            "check": CHECK_TYPE.CHAT_BOT,
+            "id": "",
+            "images": [],
+            "price": 0,
+            "receiverId": customer_data.id,
+            "receiverName": customer_data.name,
+            "receiverToken": "",
+            "reply": "",
+            "replyimages": [],
+            "senderId": system_data.id,
+            "senderName": system_data.name,
+            "senderPhone": system_data.phone,
+            "timestamp": new Date(),
+            "title": ""
+        }
+        addDoc(col_chat, doc_chat_data);
+
+        const update_room = {
+            "lastchat": bot_left_message,
+            "lastid": system_data.id,
+            "participants": [
+                customer_data.id,
+                system_data.id
+            ],
+            "receiverAvatar": customer_data.avatar_url,
+            "receiverId": customer_data.id,
+            "receiverName": customer_data.name,
+            "receiverRoleId": 1,
+            "senderAvatar": system_data.avatar_url,
+            "senderId": system_data.id,
+            "senderName": system_data.name,
+            "senderRoleId": 10,
+            "timestamp": new Date(),
+            "unread": 0,
+            "threadId": ""
+        };
+        updateDoc(docRoomByRoomId(room_id), update_room);
+    }
+
 })

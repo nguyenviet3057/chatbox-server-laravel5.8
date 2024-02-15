@@ -1,15 +1,33 @@
-window.onload = function() {
-    console.log("abc")
-    document.querySelector("body").innerHTML += (
-        "<div id='gozic-widget'>" +
-            "<iframe src='https://appbanhang.gozic.vn/module/chat-firebase/iframe' width='60' height='60' frameborder='0' allowfullscreen></iframe>" +
-        "</div>");
-    document.querySelector("head").innerHTML += (
+
+    let iframeContainer = document.createElement("div");
+    iframeContainer.id = 'gozic-widget';
+    let iframeContent = document.createElement("iframe");
+    iframeContent.id = 'gozic-iframe';
+    iframeContent.src = 'https://appbanhang.gozic.vn/module/chat-firebase/iframe';
+    iframeContent.width = 60;
+    iframeContent.height = 60;
+    iframeContent.frameBorder = '0';
+    iframeContent.allowFullscreen = true;
+
+    // Config from server
+    let logo = "https://cdn.gokisoft.com/uploads/stores/97/2024/01/583143640.jpg";
+    let welcome_title = "Welcome to Gozic";
+    let bottom = 50;
+    let right = 50;
+    let responsive_bottom = 10;
+    let responsive_right = 10;
+
+    iframeContent.setAttribute("data-logo", logo);
+    iframeContent.setAttribute("data-welcome-title", welcome_title);
+    
+    iframeContainer.appendChild(iframeContent);
+    document.body.appendChild(iframeContainer);
+    document.head.innerHTML += (
         "<style>" +
             "#gozic-widget {" +
                 "position: fixed;" +
-                "bottom: 50px;" +
-                "right: 50px;" +
+                "bottom: " + bottom + "px;" +
+                "right: " + right + "px;" +
                 "width: 60px;" +
                 "height: 60px;" +
                 "padding: 5px;" +
@@ -19,16 +37,16 @@ window.onload = function() {
                 "position: absolute;" +
                 "bottom: 0px;" +
                 "right: 0px;" +
-                "max-height: 80vh;" +
+                "max-height: calc(90vh - " + bottom + "px);" +
             "}" +
             "@media screen and (max-width: 576px) {" +
                 "#gozic-widget {" +
-                    "bottom: 10px;" +
-                    "right: 10px;" +
+                    "bottom: " + responsive_bottom + "px;" +
+                    "right: " + responsive_right + "px;" +
                 "}" +
                 "#gozic-widget iframe {" +
-                    "max-height: 80vh;" +
-                    "width: calc(100vw - 20px);" +
+                    "max-height: calc(80vh - " + responsive_bottom + "px);" +
+                    "width: calc(100vw - " + (2*responsive_right) + "px);" +
                 "}" +
             "}" +
         "</style>"
@@ -47,4 +65,14 @@ window.onload = function() {
             showChat = false;
         }
     };
-}
+
+    document.querySelector("iframe#gozic-iframe").onload = function() {
+        const data = {
+            logo: "https://cdn.gokisoft.com/uploads/stores/97/2024/01/583143640.jpg",
+            welcome_title: "Welcome to Gozic",
+            avatar_admin: "https://cdn.gokisoft.com/uploads/stores/97/2024/01/583143640.jpg",
+            avatar_system: "https://cdn.gokisoft.com/uploads/stores/97/2024/01/583143640.jpg",
+            avatar_user: "https://appbanhang.gozic.vn/uploads/stores/97/2024/01/download-removebg-preview.png",
+        }
+        document.querySelector("iframe#gozic-iframe").contentWindow.postMessage(data, '*');
+    }
