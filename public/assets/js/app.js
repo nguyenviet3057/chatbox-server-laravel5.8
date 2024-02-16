@@ -21,6 +21,7 @@ const analytics = getAnalytics(app);
 // var db = getDatabase(app);
 var auth = getAuth(app);
 var fs = getFirestore(app);
+connectFirestoreEmulator(fs, '127.0.0.1', 8082);
 
 let bot_entered_message = "(Trợ lý ảo vừa tham gia)";
 let bot_left_message = "(Trợ lý ảo vừa rời đi, bạn đang chat trực tiếp với nhân viên)";
@@ -824,7 +825,7 @@ $(document).on('change', '#toggle-bot', function() {
         $.post({
             url: "https://api.openai.com/v1/threads",
             headers: {
-                'Authorization': 'Bearer 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',
+                'Authorization': 'Bearer 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',
                 'Content-Type': 'application/json; charset=utf-8',
                 'OpenAI-Beta': 'assistants=v1',
             },

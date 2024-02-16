@@ -150,24 +150,31 @@
             background-color: #f2f2f2 !important;
         }
         .chat-list .message-info .user-name {
-            position: absolute;
-            top: 0;
-            left: 0;
-            white-space: nowrap;
-            max-width: 100%;
+            width: 100%;
+            position: relative;
+            text-overflow: ellipsis;
+            overflow-wrap: break-word;
+            display: -webkit-box;
+            -webkit-line-clamp: 1;
+            -webkit-box-orient: vertical;
             overflow: hidden;
         }
         .chat-list .message-info .message-timestamp {
-            position: absolute;
-            top: 0;
-            right: 0;
+            position: relative;
             padding-left: 10px;
             background-color: white;
             white-space: nowrap;
         }
         .chat-list .message-content {
-            white-space: nowrap;
             max-width: 100%;
+        }
+        .chat-list .message-content span {
+            width: 100%;
+            text-overflow: ellipsis;
+            overflow-wrap: break-word;
+            display: -webkit-box;
+            -webkit-line-clamp: 1;
+            -webkit-box-orient: vertical;
             overflow: hidden;
         }
 
