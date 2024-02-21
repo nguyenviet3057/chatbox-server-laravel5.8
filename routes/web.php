@@ -22,5 +22,27 @@ Auth::routes();
 
 Route::middleware('auth')->group(function() {
     Route::get('/home', 'HomeController@index')->name('home');
-    Route::get('/chat/rooms', 'ChatController@index');
+    Route::get('module/chat-firebase', 'ChatController@index');
+
+    Route::prefix('module/chat-firebase/instruction/faqs')->group(function() {
+        Route::get('', 'InstructionController@index')->name('faqs');
+        Route::get('/add', 'InstructionController@faqAdd')->name('faq.add');
+        Route::post('/add/submit', 'InstructionController@faqAddSubmit')->name('faq.add.submit');
+        Route::get('/edit/{id}', 'InstructionController@faqEdit')->name('faq.edit');
+        Route::post('/edit/submit', 'InstructionController@faqEditSubmit')->name('faq.edit.submit');
+        Route::post('/delete/submit', 'InstructionController@faqDeleteSubmit')->name('faq.delete.submit');
+    });
+
+    Route::prefix('module/chat-firebase/instruction')->group(function() {
+        Route::get('', 'InstructionController@index')->name('instructions');
+        Route::get('/add', 'InstructionController@instructionAdd')->name('instruction.add');
+        Route::post('/add/submit', 'InstructionController@instructionAddSubmit')->name('instruction.add.submit');
+        Route::get('/edit/{id}', 'InstructionController@instructionEdit')->name('instruction.edit');
+        Route::post('/edit/submit', 'InstructionController@instructionEditSubmit')->name('instruction.edit.submit');
+        Route::post('/delete/submit', 'InstructionController@instructionDeleteSubmit')->name('instruction.delete.submit');
+    });
+});
+
+Route::get('/module/chat-firebase/iframe', function() {
+    return view('chat.iframe');
 });

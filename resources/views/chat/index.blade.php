@@ -732,8 +732,41 @@
             avatar_url: "{{ $user_data->avatar_url }}",
         }
     </script>
+    <script>
+        var origin_title = document.title;
+        var topic;
+        var message;
+        var data
+        window.addEventListener('message', function(event) {
+            var receivedData = event.data;
+            if (typeof receivedData === 'object' && receivedData !== null) {
+                topic = receivedData.topic;
+                message = receivedData.message;
+                data = receivedData.data;
+    
+                if (topic == "UNREAD COUNTER" && data.unread_counter != null) {
+                    if (data.unread_counter > 0) document.title = `(${data.unread_counter}) ${origin_title}`;
+                    else document.title = origin_title;
+                }
+            }
+        });
+    </script>
     <script src="{{ asset('assets/js/utils.js') }}"></script>
     <script src="{{ asset('assets/js/image-compressor1.1.4.min.js') }}"></script>
     <script type="module" src="{{ asset('assets/js/app.js') }}"></script>
     <script src="{{ asset('assets/js/markdown-it.min.js') }}"></script>
+    {{-- <script src="https://cdnjs.cloudflare.com/ajax/libs/push.js/1.0.8/push.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/push.js/1.0.8/serviceWorker.min.js"></script> --}}
+    <script>
+        if ('Notification' in window) {
+            if (Notification.permission === 'default') {
+                console.log('default')
+                Notification.requestPermission().then(function(permission) {
+                    if (permission === 'granted') {
+                        console.log('granted');
+                    }
+                });
+            }
+        }
+    </script>
 @stop

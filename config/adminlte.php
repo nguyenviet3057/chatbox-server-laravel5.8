@@ -135,12 +135,12 @@ return [
         ['header' => 'main_navigation'],
         [
             'text'        => 'Chat',
-            'url'         => 'chat/rooms',
+            'url'         => 'module/chat-firebase',
             'icon'        => 'fas fa-fw fa-headset',
         ],
         [
             'text' => 'Q&A',
-            'url'  => 'chat/faqs',
+            'url'  => 'module/chat-firebase/instruction',
             'icon' => 'fas fa-fw fa-question-circle',
         ],
     ],

@@ -18,7 +18,7 @@ class Controller extends BaseController
     public function responseMessage($status=0, $message='Default error', $data=null) {
         $response = new stdClass();
         $response->status = $status;
-        $response->message = $message;
+        $response->msg = $message;
         $response->data = $data;
 
         return response()->json($response, 200, [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);

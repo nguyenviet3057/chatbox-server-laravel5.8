@@ -21,7 +21,7 @@ const analytics = getAnalytics(app);
 // var db = getDatabase(app);
 var auth = getAuth(app);
 var fs = getFirestore(app);
-connectFirestoreEmulator(fs, '127.0.0.1', 8082);
+// connectFirestoreEmulator(fs, '127.0.0.1', 8082);
 
 let bot_entered_message = "(Trợ lý ảo vừa tham gia)";
 let bot_left_message = "(Trợ lý ảo vừa rời đi, bạn đang chat trực tiếp với nhân viên)";
@@ -562,7 +562,7 @@ function addMessage(message, message_type="text") {
         "senderName": system_data.name,
         "senderRoleId": 10,
         "timestamp": new Date(),
-        "unread": 0,
+        "unread": 1,
         "threadId": ""
     };
     updateDoc(docRoomByRoomId(room_id), update_room);
@@ -571,7 +571,8 @@ function addMessage(message, message_type="text") {
     let data = {
         "notification": {
             "title": system_data.name, 
-            "body": message_type == "text" ? message : "đã gửi ảnh"
+            "body": message_type == "text" ? message : "đã gửi ảnh",
+            "icon": system_data.avatar_url
         },
         "priority": "high",
         "data": {
@@ -623,22 +624,18 @@ onSnapshot(query(col_rooms, orderBy("timestamp", "desc"), where("participants", 
             }
         }
         // console.log(room_data);
-        if (room.data().participants.includes(system_data.id)) {
-            // Auto read for current selected chat room
-            if (room.id == room_id) {
-                // if (unsubscribe_message != null) unsubscribe_message();
-                // console.log(room_id);
-                const update_room_data = {
-                    "unread": 0,
-                };
-                updateDoc(docRoomByRoomId(room_id), update_room_data);
-                current_room_list.push(room_data);
-            } else {
-                current_room_list.push(room_data);
-            }
-        } else {
+        // Auto read for current selected chat room
+        if (room.id == room_id && room.data().lastid != system_data.id) {
+            // if (unsubscribe_message != null) unsubscribe_message();
+            // console.log(room_id);
+            const update_room_data = {
+                "unread": 0,
+            };
+            updateDoc(docRoomByRoomId(room_id), update_room_data);
             current_room_list.push(room_data);
-            // waiting_room_list.push(room_data);
+        } else {
+            if (room.data().lastid == system_data.id) room_data.unread = 0;
+            current_room_list.push(room_data);
         }
     }));
     // console.log(current_room_list, waiting_room_list)
@@ -660,7 +657,6 @@ var unsubscribe_message = null;
 function syncMessage(room_id) {
     if (unsubscribe_message != null) unsubscribe_message();
     const doc_room = doc(fs, 'chat_rooms_gozic', room_id);
-    let participants = null;
     getDoc(doc_room).then((room) => {
         if (room.exists()) {
             if (room.data().senderId == 0 || (room.data().senderId == system_data.id)) {
@@ -679,18 +675,15 @@ function syncMessage(room_id) {
 
             room_bot_on = (room.data().threadId && room.data().threadId != "") ? true : false;
         
-            const update_room = {
-                "participants": [
-                    customer_data.id,
-                    system_data.id
-                ],
+            let participants = [
+                customer_data.id,
+                system_data.id
+            ];
+            let update_room = {
                 "unread": 0
             };
-            participants = update_room.participants;
-            // console.log(update_room)
+            updateDoc(docRoomByRoomId(room_id), update_room);
             avatar_list['user'] = customer_data.avatar_url;
-            updateDoc(doc_room, update_room);
-            // console.log(room_id);
             getDocs(query(colMessageByRoomId(room_id), orderBy("timestamp"))).then((messages_doc) => {
                 const messages = messages_doc.docs;
                 // console.log(messages);
@@ -825,7 +818,7 @@ $(document).on('change', '#toggle-bot', function() {
         $.post({
             url: "https://api.openai.com/v1/threads",
             headers: {
-                'Authorization': 'Bearer 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',
+                'Authorization': 'Bearer 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',
                 'Content-Type': 'application/json; charset=utf-8',
                 'OpenAI-Beta': 'assistants=v1',
             },
@@ -868,7 +861,7 @@ $(document).on('change', '#toggle-bot', function() {
                     "senderName": system_data.name,
                     "senderRoleId": 10,
                     "timestamp": new Date(),
-                    "unread": 0,
+                    "unread": 1,
                     "threadId": result.id
                 };
                 updateDoc(docRoomByRoomId(room_id), update_room);
@@ -917,7 +910,7 @@ $(document).on('change', '#toggle-bot', function() {
             "senderName": system_data.name,
             "senderRoleId": 10,
             "timestamp": new Date(),
-            "unread": 0,
+            "unread": 1,
             "threadId": ""
         };
         updateDoc(docRoomByRoomId(room_id), update_room);
