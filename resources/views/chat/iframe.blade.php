@@ -419,6 +419,19 @@
             overflow-y: auto;
         }
 
+        #chat-input form.bot-chatting::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.2);
+        }
+        #chat-input form.bot-chatting textarea#message {
+            background: transparent !important;
+        }
+
         #chat-input .chat-widget-container {
             display: flex;
             flex-direction: row;
@@ -701,7 +714,7 @@
     var thread_id = null;
     var col_room = null;
     var doc_room = null;
-    var bot_ready = true;
+    var bot_ready = false;
     var showChat = false;
     var lastid = null;
     var list_message_ids = [];
@@ -755,7 +768,7 @@
             "timestamp": new Date(),
             "title": ""
         }
-        addDoc(col_chat, doc_chat_data);
+        addDoc(col_chat, doc_chat_data).then((doc) => localStorage.setItem("last_message_id", doc.id));
 
         const update_room = {
             "lastchat": message_type == "text" ? message : "đã gửi ảnh",
@@ -806,13 +819,15 @@
 
         if (thread_id && bot_ready) {
             bot_ready = false;
+            $('#chat-input form').addClass('bot-chatting');
+            $('textarea#message').prop("disabled", true).prop("placeholder", "Vui lòng chờ, trợ lý đang nhắn tin...").blur();
 
             let data = {
                 message: message,
                 thread_id: thread_id
             };
             const headers = {
-                'Authorization': 'Bearer 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',
+                'Authorization': 'Bearer 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',
                 'Content-Type': 'application/json; charset=utf-8',
                 'OpenAI-Beta': 'assistants=v1',
             };
@@ -893,7 +908,7 @@
                                                 "timestamp": new Date(),
                                                 "title": ""
                                             }
-                                            addDoc(col_chat, doc_chat_data);
+                                            addDoc(col_chat, doc_chat_data).then((doc) => localStorage.setItem("last_message_id", doc.id));
 
                                             const update_room = {
                                                 "lastchat": result.data[0].content[0].text.value ?? "",
@@ -915,10 +930,14 @@
                                             };
                                             updateDoc(docRoomByRoomId(room_id), update_room);
                                             bot_ready = true;
+                                            $('#chat-input form').removeClass('bot-chatting');
+                                            $('textarea#message').prop("disabled", false).prop("placeholder", "Aa").focus();
                                         },
                                         error: function(error) {
                                             console.log("Bot failed to chat: 3");
                                             bot_ready = true;
+                                            $('#chat-input form').removeClass('bot-chatting');
+                                            $('textarea#message').prop("disabled", false).prop("placeholder", "Aa").focus();
                                         }
                                     })
                                 }
@@ -927,18 +946,24 @@
                                     console.log("Bot failed to chat: 2");
                                     clearInterval(retrieve_run)
                                     bot_ready = true;
+                                    $('#chat-input form').removeClass('bot-chatting');
+                                    $('textarea#message').prop("disabled", false).prop("placeholder", "Aa").focus();
                                 }
                             }, 5000);
                         },
                         error: function (error) {
                             console.log("Bot failed to chat: 1");
                             bot_ready = true;
+                            $('#chat-input form').removeClass('bot-chatting');
+                            $('textarea#message').prop("disabled", false).prop("placeholder", "Aa").focus();
                         }
                     })
                 },
                 error: function (error) {
                     console.log("Bot failed to chat: 0");
                     bot_ready = true;
+                    $('#chat-input form').removeClass('bot-chatting');
+                    $('textarea#message').prop("disabled", false).prop("placeholder", "Aa").focus();
                 }
             });
         }
@@ -1011,6 +1036,7 @@
                 if (doc_room_data.exists()) {    
                     system_data.id = doc_room_data.data().participants[1];
                     thread_id = doc_room_data.data().threadId;
+                    if (thread_id && thread_id != "") bot_ready = true;
                     // console.log("Retrive thread: " + thread_id);
 
                     // Sync message in real-time with firestore
@@ -1049,7 +1075,7 @@
                                 }
                             })
 
-                            if ($("textarea#message").is(":focus") && lastid == system_data.id) {
+                            if ($("textarea#message").is(":focus") && lastid == system_data.id && room.data().unread) {
                                 const update_room = {
                                     "unread": 0,
                                 };
@@ -1061,12 +1087,10 @@
                             
                             if (room.data().threadId && room.data().threadId != "") {
                                 thread_id = room.data().threadId;
+                                bot_ready = true;
+                                $(".header-title").text("Chat (bạn đang chat với trợ lý ảo)");
                             } else {
                                 thread_id = null;
-                            }
-                            if (thread_id && thread_id != "") {
-                                $(".header-title").text("Chat (bạn đang chat với trợ lý ảo)");
-                            } else if (thread_id == null) {
                                 $(".header-title").text("Chat");
                             }
 
@@ -1266,10 +1290,10 @@
             }
         });
         let loadedImages = 0;
-        $("#chat-history img").on('load', function () {
+        $(".chat-message-list img").on('load error', function () {
             loadedImages++;
             // Check if all images are loaded because of using link src
-            if (loadedImages === $("#chat-history img").length) {
+            if (loadedImages === $(".chat-message-list img").length) {
                 scrollToLastMessage();
             }
         });
@@ -1539,7 +1563,8 @@
                                 "senderPhone": system_data.phone,
                                 "timestamp": new Date(),
                                 "title": ""
-                            }).then(() => {
+                            }).then((doc) => {
+                                localStorage.setItem("last_message_id", doc.id);
                                 checkUser();
                                 $("#customer-info").fadeOut();
                                 $("textarea#message").focus();

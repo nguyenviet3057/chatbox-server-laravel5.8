@@ -89,6 +89,22 @@ function commafy(num) {
     return str.join('.');
 }
 
+function isObjectInArray(arr, obj, prop=null) {
+    return arr.some(item => {
+        if (prop) return item[prop] === obj[prop];
+        else return JSON.stringify(item) === JSON.stringify(obj);
+    });
+}
+function getUniqueObjects(arr, prop=null) {
+    const uniqueArray = [];
+    arr.forEach(obj => {
+        if (!isObjectInArray(uniqueArray, obj, prop)) {
+            uniqueArray.push(obj);
+        }
+    });
+    return uniqueArray;
+}
+
 // Upload image API
 function uploadFile(file) {
     return new Promise((resolve, reject) => {

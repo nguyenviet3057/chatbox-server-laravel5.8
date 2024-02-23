@@ -263,10 +263,10 @@ function renderOldMessage(messages, participants=[]) {
         }
     });
     let loadedImages = 0;
-    $("#chat-history img").on('load', function () {
+    $(".chat-message-list img").on('load error', function () {
         loadedImages++;
         // Check if all images are loaded because of using link src
-        if (loadedImages === $("#chat-history img").length) {
+        if (loadedImages === $(".chat-message-list img").length) {
             scrollToLastMessage();
         }
     });
@@ -598,7 +598,7 @@ function addMessage(message, message_type="text") {
 
 // Sync rooms in real-time with database
 onSnapshot(query(col_rooms, orderBy("timestamp", "desc"), where("participants", "array-contains", system_data.id)), async (snapshot) => {
-    // console.log("changed")
+    // console.log(`changed: ${current_room_list.length}`)
     current_room_list = [];
     waiting_room_list = [];
     const rooms = snapshot.docs;
@@ -623,21 +623,20 @@ onSnapshot(query(col_rooms, orderBy("timestamp", "desc"), where("participants", 
                 avatar_url: doc_room.data().senderAvatar
             }
         }
-        // console.log(room_data);
-        // Auto read for current selected chat room
-        if (room.id == room_id && room.data().lastid != system_data.id) {
-            // if (unsubscribe_message != null) unsubscribe_message();
-            // console.log(room_id);
-            const update_room_data = {
+
+        if (room.id == room_id && $("textarea#message").is(":focus") && room.data().lastid != system_data.id && room.data().unread) {
+            const update_room = {
                 "unread": 0,
             };
-            updateDoc(docRoomByRoomId(room_id), update_room_data);
-            current_room_list.push(room_data);
-        } else {
-            if (room.data().lastid == system_data.id) room_data.unread = 0;
-            current_room_list.push(room_data);
+            updateDoc(docRoomByRoomId(room_id), update_room);
         }
+
+        // console.log(room_data);
+        if (room.data().lastid == system_data.id) room_data.unread = 0;
+        current_room_list.push(room_data);
     }));
+    current_room_list = getUniqueObjects(current_room_list, "id");
+    // waiting_room_list = getUniqueObjects(waiting_room_list);
     // console.log(current_room_list, waiting_room_list)
 
     // current_room_list = current_room_list.reverse();
@@ -684,14 +683,14 @@ function syncMessage(room_id) {
             };
             if (room.data().lastid != system_data.id) updateDoc(docRoomByRoomId(room_id), update_room);
             avatar_list['user'] = customer_data.avatar_url;
-            getDocs(query(colMessageByRoomId(room_id), orderBy("timestamp"))).then((messages_doc) => {
-                const messages = messages_doc.docs;
-                // console.log(messages);
-                chat_history.innerHTML = "";
-                last_message_list = document.querySelector("#chat-history .chat-detail:last-child");
-                last_message = document.querySelector("#chat-history .chat-detail:last-child .chat-message:last-child");
-                renderOldMessage(messages, participants);
-            });
+            // getDocs(query(colMessageByRoomId(room_id), orderBy("timestamp"))).then((messages_doc) => {
+            //     const messages = messages_doc.docs;
+            //     // console.log(messages);
+            //     chat_history.innerHTML = "";
+            //     last_message_list = document.querySelector("#chat-history .chat-detail:last-child");
+            //     last_message = document.querySelector("#chat-history .chat-detail:last-child .chat-message:last-child");
+            //     renderOldMessage(messages, participants);
+            // });
             unsubscribe_message = onSnapshot(query(colMessageByRoomId(room_id), orderBy("timestamp")), (snapshot) => {
                 const messages = snapshot.docs;
                 // console.log(messages);
@@ -818,7 +817,7 @@ $(document).on('change', '#toggle-bot', function() {
         $.post({
             url: "https://api.openai.com/v1/threads",
             headers: {
-                'Authorization': 'Bearer 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',
+                'Authorization': 'Bearer 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',
                 'Content-Type': 'application/json; charset=utf-8',
                 'OpenAI-Beta': 'assistants=v1',
             },
