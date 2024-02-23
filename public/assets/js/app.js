@@ -682,7 +682,7 @@ function syncMessage(room_id) {
             let update_room = {
                 "unread": 0
             };
-            updateDoc(docRoomByRoomId(room_id), update_room);
+            if (room.data().lastid != system_data.id) updateDoc(docRoomByRoomId(room_id), update_room);
             avatar_list['user'] = customer_data.avatar_url;
             getDocs(query(colMessageByRoomId(room_id), orderBy("timestamp"))).then((messages_doc) => {
                 const messages = messages_doc.docs;
