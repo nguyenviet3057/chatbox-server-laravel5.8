@@ -718,7 +718,9 @@
     var showChat = false;
     var lastid = null;
     var list_message_ids = [];
-    var unread_counter = -1
+    var unread_counter = -1;
+    var is_user_last_id = false;
+    var first_input_check_read = false;
     const CHECK_TYPE = {
         CHAT_TEXT: 1,
         CHAT_IMAGES: 2,
@@ -816,6 +818,7 @@
         })
 
         resetReply();
+        is_user_last_id = true;
 
         if (thread_id && bot_ready) {
             bot_ready = false;
@@ -856,7 +859,7 @@
                             let run_status = result.status;
                             let begin_time = Date.now();
                             let current_retrieve_time = 0;
-                            let retrieve_times = 16;
+                            let retrieve_times = 16; // Set interval for each 5s => total 90s
                             retrieve_run = setInterval(function() {
                                 $.get({
                                     url: "https://api.openai.com/v1/threads/" + thread_id + "/runs/" + result.id,
@@ -869,18 +872,18 @@
                                         run_status = result.status;
                                     },
                                     error: function (error) {
-                                        console.log("Bot failed to chat: 1+");
+                                        console.log("Bot failed to chat: 1+")
                                         return;
                                     }
                                 })
                             
                                 if (run_status == 'failed' || run_status == 'expired' || run_status == 'cancelled') {
-                                    console.log("Bot failed to chat: 1++");
+                                    console.log("Bot failed to chat: 1++")
                                     return;
                                 }
 
                                 current_retrieve_time += 1;
-                                if (current_retrieve_time >= retrieve_times || run_status == 'completed') {
+                                if (run_status == 'completed') {
                                     clearInterval(retrieve_run);
                                     // Get message list
                                     $.get({
@@ -913,10 +916,10 @@
                                             const update_room = {
                                                 "lastchat": result.data[0].content[0].text.value ?? "",
                                                 "lastid": system_data.id,
-                                                "participants": [
-                                                    user_data.id,
-                                                    system_data.id
-                                                ],
+                                                // "participants": [
+                                                //     user_data.id,
+                                                //     system_data.id
+                                                // ],
                                                 "receiverAvatar": user_data.avatar_url,
                                                 "receiverId": user_data.id,
                                                 "receiverName": user_data.name,
@@ -930,12 +933,14 @@
                                             };
                                             updateDoc(docRoomByRoomId(room_id), update_room);
                                             bot_ready = true;
+                                            is_user_last_id = false;
                                             $('#chat-input form').removeClass('bot-chatting');
                                             $('textarea#message').prop("disabled", false).prop("placeholder", "Aa").focus();
                                         },
                                         error: function(error) {
-                                            console.log("Bot failed to chat: 3");
+                                            console.log("Bot failed to chat: 3")
                                             bot_ready = true;
+                                            is_user_last_id = true;
                                             $('#chat-input form').removeClass('bot-chatting');
                                             $('textarea#message').prop("disabled", false).prop("placeholder", "Aa").focus();
                                         }
@@ -943,25 +948,28 @@
                                 }
 
                                 if (current_retrieve_time >= retrieve_times && run_status != 'completed') {
-                                    console.log("Bot failed to chat: 2");
-                                    clearInterval(retrieve_run)
+                                    console.log("Bot failed to chat: 2")
+                                    clearInterval(retrieve_run);
                                     bot_ready = true;
+                                    is_user_last_id = true;
                                     $('#chat-input form').removeClass('bot-chatting');
                                     $('textarea#message').prop("disabled", false).prop("placeholder", "Aa").focus();
                                 }
                             }, 5000);
                         },
                         error: function (error) {
-                            console.log("Bot failed to chat: 1");
+                            console.log("Bot failed to chat: 1")
                             bot_ready = true;
+                            is_user_last_id = true;
                             $('#chat-input form').removeClass('bot-chatting');
                             $('textarea#message').prop("disabled", false).prop("placeholder", "Aa").focus();
                         }
                     })
                 },
                 error: function (error) {
-                    console.log("Bot failed to chat: 0");
+                    console.log("Bot failed to chat: 0")
                     bot_ready = true;
+                    is_user_last_id = true;
                     $('#chat-input form').removeClass('bot-chatting');
                     $('textarea#message').prop("disabled", false).prop("placeholder", "Aa").focus();
                 }
@@ -1056,6 +1064,8 @@
                         last_message_list = document.querySelector("#chat-history .chat-detail:last-child");
                         last_message = document.querySelector("#chat-history .chat-detail:last-child .chat-message:last-child");
                         renderOldMessages(messages);
+
+                        first_input_check_read = false;
                     }, (error) => {
                         console.log(error);
                     });
@@ -1067,24 +1077,32 @@
                             system_data.id = room.data().participants[1];
                             lastid = room.data().lastid;
 
-                            let doc_admin = doc(fs, 'users_gozic', system_data.id);
-                            getDoc(doc_admin).then((doc_admin_data) => {
-                                if (doc_admin_data.exists()) {
-                                    system_data.token = doc_admin_data.data().token;
-                                    // console.log(system_data.token);
-                                }
-                            })
+                            // console.log("Changed from thread " + (thread_id ? thread_id : "null") + " to " + ((room.data().threadId && room.data().threadId != "") ? room.data().threadId : "null"));
 
-                            if ($("textarea#message").is(":focus") && lastid == system_data.id && room.data().unread) {
-                                const update_room = {
-                                    "unread": 0,
-                                };
-                                updateDoc(docRoomByRoomId(room_id), update_room);
-                                localStorage.setItem("last_message_id", list_message_ids.length > 0 ? list_message_ids[list_message_ids.length - 1] : "");
+                            if (room.data().lastid == system_data.id && room.data().unread) {
+                                if (unread_counter <= 0 || unread_counter > 99) {
+                                    // Code when retrieve only a part of all message
+                                } else {
+                                    $("#popup-iframe-gozic").attr("data-unread-counter", unread_counter).addClass("alert-new-message");
+                                    window.parent.postMessage({
+                                        topic: "UNREAD COUNTER",
+                                        message: "",
+                                        data: {
+                                            unread_counter: unread_counter
+                                        }
+                                    }, '*');
+                                }
+                            } else {
+                                $("#popup-iframe-gozic").removeClass("alert-new-message").removeAttr("data-unread-counter");
+                                window.parent.postMessage({
+                                    topic: "UNREAD COUNTER",
+                                    message: "",
+                                    data: {
+                                        unread_counter: 0
+                                    }
+                                }, '*');
                             }
 
-                            // console.log("Changed from thread " + (thread_id ? thread_id : "null") + " to " + ((room.data().threadId && room.data().threadId != "") ? room.data().threadId : "null"));
-                            
                             if (room.data().threadId && room.data().threadId != "") {
                                 thread_id = room.data().threadId;
                                 bot_ready = true;
@@ -1094,29 +1112,13 @@
                                 $(".header-title").text("Chat");
                             }
 
-                            if (room.data().lastid == system_data.id && room.data().unread) {
-                                if (unread_counter <= 0 || unread_counter > 99) {
-                                    // Code when retrieve only a part of all message
-                                } else {
-                                    window.parent.postMessage({
-                                        topic: "UNREAD COUNTER",
-                                        message: "",
-                                        data: {
-                                            unread_counter: unread_counter
-                                        }
-                                    }, '*');
-                                    $("#popup-iframe-gozic").attr("data-unread-counter", unread_counter).addClass("alert-new-message");
+                            let doc_admin = doc(fs, 'users_gozic', system_data.id);
+                            getDoc(doc_admin).then((doc_admin_data) => {
+                                if (doc_admin_data.exists()) {
+                                    system_data.token = doc_admin_data.data().token;
+                                    // console.log(system_data.token);
                                 }
-                            } else {
-                                window.parent.postMessage({
-                                    topic: "UNREAD COUNTER",
-                                    message: "",
-                                    data: {
-                                        unread_counter: 0
-                                    }
-                                }, '*');
-                                $("#popup-iframe-gozic").removeClass("alert-new-message").removeAttr("data-unread-counter");
-                            }
+                            })
                         }
                     })
 
@@ -1128,8 +1130,9 @@
     if (user_data != null) checkUser();
 
     $(document).ready(function() {
-        $("textarea#message").focus(function() {
-            if (lastid == system_data.id) {
+        $("textarea#message").on('click input', function() {
+            if (room_id && !is_user_last_id && !first_input_check_read) {
+                first_input_check_read = true;
                 const update_room = {
                     "unread": 0,
                 };
@@ -1289,14 +1292,18 @@
                     break;
             }
         });
-        let loadedImages = 0;
-        $(".chat-message-list img").on('load error', function () {
-            loadedImages++;
-            // Check if all images are loaded because of using link src
-            if (loadedImages === $(".chat-message-list img").length) {
-                scrollToLastMessage();
-            }
-        });
+        if ($(".chat-message-list img").length > 0) {
+            let loadedImages = 0;
+            $(".chat-message-list img").on('load error', function () {
+                loadedImages++;
+                // Check if all images are loaded because of using link src
+                if (loadedImages === $(".chat-message-list img").length) {
+                    scrollToLastMessage();
+                }
+            });
+        } else {
+            scrollToLastMessage();
+        }
     }
 
     //Handle file input

@@ -65,6 +65,8 @@ var is_show_all_current = false;
 var is_show_all_waiting = false;
 var room_id = null; // current selected room
 var max_room = 3;
+var is_system_last_id = false;
+var first_input_check_read = false;
 const CHECK_TYPE = {
     CHAT_TEXT: 1,
     CHAT_IMAGES: 2,
@@ -153,7 +155,7 @@ function renderMessage(message, is_reply=false, reply, avatar_url = avatar_list)
                 reply_content = "<div class='reply-note'><span>" + shortenStringDisplay(reply.message, 30) + "</span></div>";
                 break;
             case "product":
-                console.log(reply);
+                // console.log(reply);
                 reply_content = "<div class='reply-note d-flex flex-column'>" +
                     "<img class='col-xs-4 p-0' src='" + reply.product_image + "'>" +
                     "<span class='product-title col-xs-8'>" + reply.product_title + "</span>" +
@@ -245,7 +247,7 @@ function renderOldMessage(messages, participants=[]) {
             reply_data.type = "product";
             reply_data.product_title = message.data().title;
             reply_data.product_image = message.data().askimg;
-            console.log(reply_data)
+            // console.log(reply_data)
         }
         switch (message.data().senderId) {
             case 0:
@@ -262,14 +264,18 @@ function renderOldMessage(messages, participants=[]) {
                 break;
         }
     });
-    let loadedImages = 0;
-    $(".chat-message-list img").on('load error', function () {
-        loadedImages++;
-        // Check if all images are loaded because of using link src
-        if (loadedImages === $(".chat-message-list img").length) {
-            scrollToLastMessage();
-        }
-    });
+    if ($(".chat-message-list img").length > 0) {
+        let loadedImages = 0;
+        $(".chat-message-list img").on('load error', function () {
+            loadedImages++;
+            // Check if all images are loaded because of using link src
+            if (loadedImages === $(".chat-message-list img").length) {
+                scrollToLastMessage();
+            }
+        });
+    } else {
+        scrollToLastMessage();
+    }
 }
 
 // Re-render old rooms
@@ -483,7 +489,7 @@ $(document).ready(function () {
 
             // Compress images
             const compressedImages = await Promise.all(promises);
-            console.log(compressedImages)
+            // console.log(compressedImages)
 
             // Upload compressed images
             let image_list = [];
@@ -594,6 +600,7 @@ function addMessage(message, message_type="text") {
     })
 
     resetReply();
+    is_system_last_id = true;
 }
 
 // Sync rooms in real-time with database
@@ -602,45 +609,36 @@ onSnapshot(query(col_rooms, orderBy("timestamp", "desc"), where("participants", 
     current_room_list = [];
     waiting_room_list = [];
     const rooms = snapshot.docs;
-    // console.log(rooms)
+    // console.log(rooms.map(room => room.data().lastchat))
     await Promise.all(rooms.map(async (room) => {
-        // console.log(room.data());
+        // console.log(room.data().lastchat)
         let room_data = room.data();
         room_data.id = room.id;
-        let doc_room = await getDoc(doc(fs, 'chat_rooms_gozic', room.id));
-        room_data.message_content = "<span>" + shortenStringDisplay(doc_room.data().lastchat, -1) + "</span>";
-        room_data.time_display = formatTimestampDisplay(doc_room.data().timestamp.seconds);
-        if (doc_room.data().senderId == 0 || (doc_room.data().senderId == system_data.id)) {
-            // console.log("customer is receiver");
+        room_data.message_content = "<span>" + shortenStringDisplay(room.data().lastchat, -1) + "</span>";
+        room_data.time_display = formatTimestampDisplay(room.data().timestamp.seconds);
+        if (room.data().senderId == 0 || (room.data().senderId == system_data.id)) {
             room_data.customer = {
-                name: doc_room.data().receiverName,
-                avatar_url: doc_room.data().receiverAvatar
+                name: room.data().receiverName,
+                avatar_url: room.data().receiverAvatar
             }
-        } else if (doc_room.data().receiverId == 0 || doc_room.data().receiverId == system_data.id) {
-            // console.log("customer is sender");
+        } else if (room.data().receiverId == 0 || room.data().receiverId == system_data.id) {
             room_data.customer = {
-                name: doc_room.data().senderName,
-                avatar_url: doc_room.data().senderAvatar
+                name: room.data().senderName,
+                avatar_url: room.data().senderAvatar
             }
         }
 
-        if (room.id == room_id && $("textarea#message").is(":focus") && room.data().lastid != system_data.id && room.data().unread) {
-            const update_room = {
-                "unread": 0,
-            };
-            updateDoc(docRoomByRoomId(room_id), update_room);
+        // Auto check unread status for current selected room
+        if (room.id == room_id) {
+            if (room.data().lastid != system_data.id && room.data().unread) is_system_last_id = false;
+            else is_system_last_id = true;
         }
 
-        // console.log(room_data);
+        // console.log(room_data.message_content)
         if (room.data().lastid == system_data.id) room_data.unread = 0;
         current_room_list.push(room_data);
     }));
-    current_room_list = getUniqueObjects(current_room_list, "id");
-    // waiting_room_list = getUniqueObjects(waiting_room_list);
     // console.log(current_room_list, waiting_room_list)
-
-    // current_room_list = current_room_list.reverse();
-    // waiting_room_list = waiting_room_list.reverse();
 
     showAllCurrent();
     // if (is_show_all_current) showAllCurrent();
@@ -651,12 +649,23 @@ onSnapshot(query(col_rooms, orderBy("timestamp", "desc"), where("participants", 
     console.log(error);
 });
 
+$(document).ready(function() {
+    $("textarea#message").on('click input', function() {
+        if (room_id && !is_system_last_id && !first_input_check_read) {
+            first_input_check_read = true;
+            const update_room = {
+                "unread": 0,
+            };
+            updateDoc(docRoomByRoomId(room_id), update_room);
+        }
+    });
+})
+
 // Sync message in real-time with database
 var unsubscribe_message = null;
 function syncMessage(room_id) {
     if (unsubscribe_message != null) unsubscribe_message();
-    const doc_room = doc(fs, 'chat_rooms_gozic', room_id);
-    getDoc(doc_room).then((room) => {
+    getDoc(docRoomByRoomId(room_id)).then((room) => {
         if (room.exists()) {
             if (room.data().senderId == 0 || (room.data().senderId == system_data.id)) {
                 customer_data = {
@@ -678,10 +687,15 @@ function syncMessage(room_id) {
                 customer_data.id,
                 system_data.id
             ];
-            let update_room = {
-                "unread": 0
-            };
-            if (room.data().lastid != system_data.id) updateDoc(docRoomByRoomId(room_id), update_room);
+            if (room.data().lastid != system_data.id) {
+                is_system_last_id = false;
+                const update_room = {
+                    "unread": 0,
+                };
+                updateDoc(docRoomByRoomId(room_id), update_room);
+            } else {
+                is_system_last_id = true;
+            }
             avatar_list['user'] = customer_data.avatar_url;
             // getDocs(query(colMessageByRoomId(room_id), orderBy("timestamp"))).then((messages_doc) => {
             //     const messages = messages_doc.docs;
@@ -698,6 +712,8 @@ function syncMessage(room_id) {
                 last_message_list = document.querySelector("#chat-history .chat-detail:last-child");
                 last_message = document.querySelector("#chat-history .chat-detail:last-child .chat-message:last-child");
                 renderOldMessage(messages, participants);
+                
+                first_input_check_read = false;
             })
             
             activeRoomCSS(room_id);
@@ -782,7 +798,7 @@ $(document).on('click', '.images-message > div', function() {
     $("body").append(popupImage($(this).children("img").eq(0).prop("src")));
 })
 $(document).on('click', '.chat-message > img', function() {
-    console.log($(this), $(this).prop("src"))
+    // console.log($(this), $(this).prop("src"))
     $("body").append(popupImage($(this).prop("src")));
 })
 function popupImage(img_src) {
@@ -847,10 +863,10 @@ $(document).on('change', '#toggle-bot', function() {
                 const update_room = {
                     "lastchat": bot_entered_message,
                     "lastid": system_data.id,
-                    "participants": [
-                        customer_data.id,
-                        system_data.id
-                    ],
+                    // "participants": [
+                    //     customer_data.id,
+                    //     system_data.id
+                    // ],
                     "receiverAvatar": customer_data.avatar_url,
                     "receiverId": customer_data.id,
                     "receiverName": customer_data.name,
@@ -896,10 +912,10 @@ $(document).on('change', '#toggle-bot', function() {
         const update_room = {
             "lastchat": bot_left_message,
             "lastid": system_data.id,
-            "participants": [
-                customer_data.id,
-                system_data.id
-            ],
+            // "participants": [
+            //     customer_data.id,
+            //     system_data.id
+            // ],
             "receiverAvatar": customer_data.avatar_url,
             "receiverId": customer_data.id,
             "receiverName": customer_data.name,
