@@ -772,6 +772,14 @@ $(document).on('click', ".message-reply", function() {
             $("#reply-images").removeClass('d-show');
             $("#chat-history").removeClass('with-reply');
             break;
+        case "markdown":
+            reply.check = CHECK_TYPE.REPLY_CHAT_TEXT;
+            reply.reply = $(this).parent(".chat-message").children(".chat-markdown").eq(0).text();
+            reply.images = [];
+            $("#reply-detail #reply-content").text(shortenStringDisplay(reply.reply, 30));
+            $("#reply-images").removeClass('d-show');
+            $("#chat-history").removeClass('with-reply');
+            break;
 
     }
     $("#chat-history").addClass('with-reply');
@@ -833,7 +841,7 @@ $(document).on('change', '#toggle-bot', function() {
         $.post({
             url: "https://api.openai.com/v1/threads",
             headers: {
-                'Authorization': 'Bearer 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',
+                'Authorization': 'Bearer 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',
                 'Content-Type': 'application/json; charset=utf-8',
                 'OpenAI-Beta': 'assistants=v1',
             },

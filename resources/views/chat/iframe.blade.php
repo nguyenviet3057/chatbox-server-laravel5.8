@@ -830,7 +830,7 @@
                 thread_id: thread_id
             };
             const headers = {
-                'Authorization': 'Bearer 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',
+                'Authorization': 'Bearer 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',
                 'Content-Type': 'application/json; charset=utf-8',
                 'OpenAI-Beta': 'assistants=v1',
             };
@@ -1412,6 +1412,14 @@
             case "text":
                 reply.check = CHECK_TYPE.REPLY_CHAT_TEXT;
                 reply.reply = $(this).parent(".chat-message").children("span").eq(0).text();
+                reply.images = [];
+                $("#reply-detail #reply-content").text(shortenStringDisplay(reply.reply, 30));
+                $("#reply-images").removeClass('d-show');
+                $("#chat-history").removeClass('with-reply');
+                break;
+            case "markdown":
+                reply.check = CHECK_TYPE.REPLY_CHAT_TEXT;
+                reply.reply = $(this).parent(".chat-message").children(".chat-markdown").eq(0).text();
                 reply.images = [];
                 $("#reply-detail #reply-content").text(shortenStringDisplay(reply.reply, 30));
                 $("#reply-images").removeClass('d-show');
