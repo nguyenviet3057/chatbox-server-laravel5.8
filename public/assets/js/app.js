@@ -589,15 +589,17 @@ function addMessage(message, message_type="text") {
         },
         "to": customer_data.token ?? ""
     };
-    $.post({
-        url: "https://fcm.googleapis.com/fcm/send",
-        contentType: 'application/json; charset=utf-8',
-        headers: {
-            Authorization: "key=AAAA9XMRnyQ:APA91bEoAtbVA7Uq47FtyQa71SpBMdVhfWT3sKeVODNH9izm4yI8pQJ3oTdDSf_FGC4rVcaXEJjZFzfTyC6izycPetPZlx0HSghNgJ5zbzN9XWYkLVe_zMEfj28l52eeWE4Z_LmFpIJ-",
-        },
-        dataType: 'json',
-        data: JSON.stringify(data)
-    })
+    if (customer_data.token && customer_data.token != "") {
+        $.post({
+            url: "https://fcm.googleapis.com/fcm/send",
+            contentType: 'application/json; charset=utf-8',
+            headers: {
+                Authorization: "key=AAAA9XMRnyQ:APA91bEoAtbVA7Uq47FtyQa71SpBMdVhfWT3sKeVODNH9izm4yI8pQJ3oTdDSf_FGC4rVcaXEJjZFzfTyC6izycPetPZlx0HSghNgJ5zbzN9XWYkLVe_zMEfj28l52eeWE4Z_LmFpIJ-",
+            },
+            dataType: 'json',
+            data: JSON.stringify(data)
+        })
+    }
 
     resetReply();
     is_system_last_id = true;

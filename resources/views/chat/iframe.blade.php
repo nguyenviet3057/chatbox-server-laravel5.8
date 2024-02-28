@@ -665,6 +665,8 @@
                 .catch(function(error) {
                     console.error('Service Worker registration failed:', error);
                 });
+            } else {
+                swRegistration = registrations[0];
             }
         });
     } else {
@@ -1518,7 +1520,8 @@
 
             if (is_valid) {
                 $(this).prop("disabled", true);
-                getToken(messaging, { serviceWorkerRegistration: swRegistration, vapidKey: system_data.vapid }).then((currentToken) => {
+                getToken(messaging, { serviceWorkerRegistration: swRegistration, vapidKey: system_data.vapid })
+                .then((currentToken) => {
                     if (currentToken) {
                         user_data = {
                             id: Date.now() + makeid(8),
@@ -1590,11 +1593,101 @@
                     }
                 }).catch((err) => {
                     console.log('An error occurred while retrieving token. ', err);
-                    $("#customer-info button").text("Chưa cấp quyền thông báo").css({color: "white", backgroundColor: "red"});
+                    localStorage.setItem('err', err);
+                    // $("#customer-info button").text("Lỗi, hãy tải lại trang và thử lại!").css({color: "white", backgroundColor: "red"});
+                    user_data = {
+                        id: Date.now() + makeid(8),
+                        name: $("#customer-info input[name='name']").val(),
+                        phone: $("#customer-info input[name='phone']").val(),
+                        avatar_url: avatar_list.user,
+                        created_at: new Date(),
+                        token: ""
+                    }
+                    const doc_user = doc(fs, 'users_gozic', user_data.id.toString());
+                    setDoc(doc_user, {
+                        date_time: new Date(),
+                        id: user_data.id,
+                        name: user_data.name,
+                        token: user_data.token
+                    });
+
+                    localStorage.setItem("user_data", JSON.stringify(user_data)); // Temporary save user data for getting old messages
+                    localStorage.setItem("system_data", JSON.stringify(system_data)); // Temporary save system data for getting old messages
+                    
+                    room_id = system_data.id + "_" + user_data.id;
+                    doc_room = doc(fs, 'chat_rooms_gozic', room_id);
+                    setDoc(doc_room, {
+                        "lastchat": firstMessage(user_data),
+                        "lastid": system_data.id,
+                        "participants": [
+                            user_data.id,
+                            system_data.id
+                        ],
+                        "receiverAvatar": user_data.avatar_url,
+                        "receiverId": user_data.id,
+                        "receiverName": user_data.name,
+                        "receiverRoleId": 1,
+                        "senderAvatar": system_data.avatar_url,
+                        "senderId": system_data.id,
+                        "senderName": system_data.name,
+                        "senderRoleId": 10,
+                        "timestamp": new Date(),
+                        "unread": 0,
+                        "threadId": ""
+                    }).then(() => {
+                        col_room = collection(doc_room, "chat")
+                        addDoc(col_room, {
+                            "askimg": "",
+                            "chat": firstMessage(user_data),
+                            "check": 1,
+                            "id": "",
+                            "images": [],
+                            "price": 0,
+                            "receiverId": user_data.id,
+                            "receiverName": user_data.name,
+                            "receiverToken": "",
+                            "reply": "",
+                            "replyimages": [],
+                            "senderId": system_data.id,
+                            "senderName": system_data.name,
+                            "senderPhone": system_data.phone,
+                            "timestamp": new Date(),
+                            "title": ""
+                        }).then((doc) => {
+                            localStorage.setItem("last_message_id", doc.id);
+                            checkUser();
+                            $("#customer-info").fadeOut();
+                            $("textarea#message").focus();
+                        });
+                    })
                 });
             }
         });
     });
+
+    window.addEventListener('message', function(event) {
+        console.log('Message from parent:', event.data);
+        if (event.data.is_granted && user_data && user_data.token == "") {
+            getToken(messaging, { serviceWorkerRegistration: swRegistration, vapidKey: system_data.vapid })
+                .then((currentToken) => {
+                    if (currentToken) {
+                        user_data.token = currentToken;
+                        const doc_user = doc(fs, 'users_gozic', user_data.id.toString());
+                        updateDoc(doc_user, {
+                            token: user_data.token
+                        });
+
+                        localStorage.setItem("user_data", JSON.stringify(user_data)); // Temporary save user data for getting old messages
+                        localStorage.setItem("system_data", JSON.stringify(system_data)); // Temporary save system data for getting old messages
+                    } else {
+                        console.log('No registration token available. Request permission to generate one.');
+                    }
+                }).catch((err) => {
+                    console.log('An error occurred while retrieving token. ', err);
+                    localStorage.setItem('err', err);
+                });
+        }
+    }, false);
 
     // Handle click image
     $(document).on('click', '.images-message > div', function() {

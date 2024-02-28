@@ -764,6 +764,13 @@
                 Notification.requestPermission().then(function(permission) {
                     if (permission === 'granted') {
                         console.log('granted');
+                        const iframe = document.getElementById('gozic-iframe');
+                        const data = {
+                            message: 'Notification permission is granted',
+                            is_granted: true
+                        };
+
+                        iframe.contentWindow.postMessage(data, '*');
                     }
                 });
             }
