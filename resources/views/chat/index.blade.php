@@ -112,6 +112,19 @@
             background-color: white;
         }
 
+        #message-nav #search-room {
+            border-bottom: 2px solid lightgray;
+        }
+        input#customer-name {
+            padding-right: 30px;
+        }
+
+        #icon-search-customer {
+            position: absolute;
+            right: 10px;
+            color: gray;
+        }
+
         #message-nav > span {
             width: 100%;
             height: 24px;
@@ -131,10 +144,10 @@
             object-fit: contain;
         }
 
-        #message-nav > div {
+        /* #message-nav > div {
             max-height: 50%;
             overflow-y: auto;
-        }
+        } */
 
         #message-nav > div > div.show-all-rooms, #message-nav > div > div.show-less-rooms {
             height: 25px;
@@ -645,6 +658,10 @@
     <div class="content-container row w-100 m-0 p-0">
         <div class="col-xs-4 m-0 p-0 d-flex flex-column" id="message-nav">
             {{-- <span id="current-rooms-span">Current</span> --}}
+            <div id="search-room" class="d-flex align-items-center">
+                <input type="text" placeholder="Tên khách hàng..." id="customer-name" class="form-control">
+                <i class="fas fa-search" id="icon-search-customer"></i>
+            </div>
             <div id="current-container">
                 <ul class="w-100 list-unstyled mb-0" id="current-rooms">
                 </ul>
@@ -730,6 +747,7 @@
             email: "{{ $user_data->email }}",
             phone: "{{ $user_data->phone }}",
             avatar_url: "{{ $user_data->avatar_url }}",
+            vapid: "BOdrLVZfmC0wgJc8PNMXS3ZY66jqpaU1KVee4Y1YNg5h8aEEHjbwcY4LqOPzzUc2h387XUsjsViaZfQuGpWWz9I"
         }
     </script>
     <script>

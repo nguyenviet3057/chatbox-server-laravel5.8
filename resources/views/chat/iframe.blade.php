@@ -795,30 +795,62 @@
         updateDoc(docRoomByRoomId(room_id), update_room);
 
         // Send Cloud Messaging Notification to mobile device
-        let data = {
-            "notification": {
-                "title": system_data.name, 
-                "body": message_type == "text" ? message : "đã gửi ảnh"
-            },
-            "priority": "high", 
-            "data": {
-                "click_action":"test",
-                "id": "1",
-                "status": "done",
-                "message" : message_type == "text" ? message : "đã gửi ảnh"
-            },
-            "to": system_data.token ?? ""
-        };
-        $.post({
-            url: "https://fcm.googleapis.com/fcm/send",
-            contentType: 'application/json; charset=utf-8',
-            headers: {
-                Authorization: "key=AAAA9XMRnyQ:APA91bEoAtbVA7Uq47FtyQa71SpBMdVhfWT3sKeVODNH9izm4yI8pQJ3oTdDSf_FGC4rVcaXEJjZFzfTyC6izycPetPZlx0HSghNgJ5zbzN9XWYkLVe_zMEfj28l52eeWE4Z_LmFpIJ-",
-            },
-            dataType: 'json',
-            data: JSON.stringify(data)
-        })
-
+        if (system_data.token && system_data.token != "") {
+            let data = {
+                "notification": {
+                    "title": user_data.name, 
+                    "body": message_type == "text" ? message : "đã gửi ảnh",
+                    "icon": user_data.avatar_url
+                },
+                "priority": "high", 
+                "data": {
+                    "click_action":"test",
+                    "id": "1",
+                    "status": "done",
+                    "message" : message_type == "text" ? message : "đã gửi ảnh"
+                },
+                "to": system_data.token
+            };
+            $.post({
+                url: "https://fcm.googleapis.com/fcm/send",
+                contentType: 'application/json; charset=utf-8',
+                headers: {
+                    Authorization: "key=AAAA9XMRnyQ:APA91bEoAtbVA7Uq47FtyQa71SpBMdVhfWT3sKeVODNH9izm4yI8pQJ3oTdDSf_FGC4rVcaXEJjZFzfTyC6izycPetPZlx0HSghNgJ5zbzN9XWYkLVe_zMEfj28l52eeWE4Z_LmFpIJ-",
+                },
+                dataType: 'json',
+                data: JSON.stringify(data)
+            })
+        }
+            
+        // Send Cloud Messaging Notification to web browser
+        if (system_data.token_web && system_data.token_web != "") {
+            let data = {
+                "notification": {
+                    "title": user_data.name, 
+                    "body": message_type == "text" ? message : "đã gửi ảnh"
+                    "icon": user_data.avatar_url
+                },
+                "priority": "high", 
+                "data": {
+                    "click_action":"test",
+                    "id": "1",
+                    "status": "done",
+                    "message" : message_type == "text" ? message : "đã gửi ảnh"
+                },
+                "to": system_data.token_web
+                // "registration_ids": system_data.tokens
+            };
+            $.post({
+                url: "https://fcm.googleapis.com/fcm/send",
+                contentType: 'application/json; charset=utf-8',
+                headers: {
+                    Authorization: "key=AAAA9XMRnyQ:APA91bEoAtbVA7Uq47FtyQa71SpBMdVhfWT3sKeVODNH9izm4yI8pQJ3oTdDSf_FGC4rVcaXEJjZFzfTyC6izycPetPZlx0HSghNgJ5zbzN9XWYkLVe_zMEfj28l52eeWE4Z_LmFpIJ-",
+                },
+                dataType: 'json',
+                data: JSON.stringify(data)
+            })
+        }
+        
         resetReply();
         is_user_last_id = true;
 
@@ -1118,6 +1150,13 @@
                             getDoc(doc_admin).then((doc_admin_data) => {
                                 if (doc_admin_data.exists()) {
                                     system_data.token = doc_admin_data.data().token;
+                                    // console.log(system_data.token);
+                                }
+                            })
+                            let doc_admin_token = doc(fs, 'admin_tokens', system_data.id);
+                            getDoc(doc_admin_token).then((doc_admin_data) => {
+                                if (doc_admin_data.exists()) {
+                                    system_data.token_web = doc_admin_data.data().token_web;
                                     // console.log(system_data.token);
                                 }
                             })

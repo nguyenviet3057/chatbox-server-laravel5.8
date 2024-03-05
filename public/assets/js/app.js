@@ -4,6 +4,7 @@ import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.7.1/firebase
 import { getAuth, connectAuthEmulator } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 // import { getDatabase, connectDatabaseEmulator, ref, child, push, get, set, update, serverTimestamp, onValue, off, query, orderByChild, equalTo, limitToLast } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 import { getFirestore, connectFirestoreEmulator, collection, orderBy, getDocs, doc, getDoc, addDoc, setDoc, updateDoc, serverTimestamp, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js";
 
 // Initialize Firebase
 const firebaseConfig = {
@@ -22,6 +23,84 @@ const analytics = getAnalytics(app);
 var auth = getAuth(app);
 var fs = getFirestore(app);
 // connectFirestoreEmulator(fs, '127.0.0.1', 8082);
+var messaging = getMessaging(app);
+
+var swRegistration;
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then(function(registrations) {
+        if (registrations.length == 0) {
+            navigator.serviceWorker.register('/dist/js/firebase-messaging-sw.js')
+            .then(function(registration) {
+                console.log('Service Worker registered:', registration);
+                swRegistration = registration;
+                if (Notification.permission === 'granted') checkUser();
+            })
+            .catch(function(error) {
+                console.error('Service Worker registration failed:', error);
+            });
+        } else {
+            swRegistration = registrations[0];
+            if (Notification.permission === 'granted') checkUser();
+        }
+    });
+} else {
+    console.log('Service Worker is not supported.');
+}
+
+if ('Notification' in window) {
+    if (Notification.permission === 'default') {
+        console.log('default')
+        Notification.requestPermission().then(function(permission) {
+            if (permission === 'granted') {
+                console.log('granted');
+            }
+        });
+    }
+}
+
+async function checkUser() {
+    let doc_system = doc(fs, 'admin_tokens', system_data.id);
+    getDoc(doc_system).then(doc_system_data => {
+        // console.log(doc_system_data.id, doc_system_data.data())
+        if (doc_system_data && doc_system_data.data().token_web) {
+            // Code if need to subscribe to topic
+            let token_web = localStorage.getItem('token_web');
+            if (token_web == null || token_web != doc_system_data.data().token_web) {
+                getToken(messaging, { serviceWorkerRegistration: swRegistration, vapidKey: system_data.vapid })
+                .then((currentToken) => {
+                    if (currentToken) {
+                        console.log(currentToken)
+                        updateDoc(doc_system, {
+                            token_web: currentToken
+                        });
+                        localStorage.setItem('token_web', currentToken);
+                    } else {
+                        console.log('No registration token available. Request permission to generate one.');
+                    }
+                }).catch((err) => {
+                    console.log('An error occurred while retrieving token. ', err);
+                    localStorage.setItem('err', err);
+                });
+            } 
+        } else {
+            getToken(messaging, { serviceWorkerRegistration: swRegistration, vapidKey: system_data.vapid })
+                .then((currentToken) => {
+                    if (currentToken) {
+                        console.log(currentToken)
+                        updateDoc(doc_system, {
+                            token_web: currentToken
+                        });
+                        localStorage.setItem('token_web', currentToken);
+                    } else {
+                        console.log('No registration token available. Request permission to generate one.');
+                    }
+                }).catch((err) => {
+                    console.log('An error occurred while retrieving token. ', err);
+                    localStorage.setItem('err', err);
+                });
+        }
+    })
+}
 
 let bot_entered_message = "(Trợ lý ảo vừa tham gia)";
 let bot_left_message = "(Trợ lý ảo vừa rời đi, bạn đang chat trực tiếp với nhân viên)";
@@ -67,6 +146,7 @@ var room_id = null; // current selected room
 var max_room = 3;
 var is_system_last_id = false;
 var first_input_check_read = false;
+var is_searching_room = false;
 const CHECK_TYPE = {
     CHAT_TEXT: 1,
     CHAT_IMAGES: 2,
@@ -362,7 +442,7 @@ $(document).on("click", "div#show-less-waiting", function() {
     showLessWaiting();
 });
 
-function showAllCurrent() {
+function showAllCurrent(room_list=current_room_list) {
     // console.log("show all current");
     $("#show-all-current").removeClass('d-flex').addClass('d-none');
     if (is_show_all_waiting) {
@@ -373,7 +453,7 @@ function showAllCurrent() {
     let section_chat_room_height = $("div.content-container").height();
     let section_current_height = $("#current-container").height();
     let section_waiting_height = $("#waiting-container").height();
-    if (current_room_list.length > max_room) {
+    if (room_list.length > max_room) {
         $("#current-container").css({ "height": (section_chat_room_height - section_waiting_height - section_status_span) + "px", "overflow-y": "auto", "max-height": "none" });
         $("#show-less-current").removeClass('d-none').addClass('d-flex');
     } else {
@@ -381,12 +461,12 @@ function showAllCurrent() {
         $("#show-less-current").removeClass('d-flex').addClass('d-none');
     }
     message_nav_container_current.innerHTML = "";
-    renderOldRooms(current_room_list, message_nav_container_current);
+    renderOldRooms(room_list, message_nav_container_current);
 
     is_show_all_current = true;
 }
 
-function showLessCurrent() {
+function showLessCurrent(room_list=current_room_list) {
     // console.log("show less current");
     let section_status_span = $("#current-rooms-span").height() * 2;
     let section_chat_room_height = $("div.content-container").height();
@@ -395,18 +475,18 @@ function showLessCurrent() {
     $("#show-less-current").removeClass('d-flex').addClass('d-none');
     message_nav_container_current.innerHTML = "";
     $("#current-container").css({ "height": "fit-content", "max-height": (section_current_height + section_status_span/2 < section_chat_room_height/2) ? "none" : "calc(50% - " + (section_status_span/2) + "px)" });
-    if (current_room_list.length > max_room) {
-        renderOldRooms(current_room_list.slice(0, max_room), message_nav_container_current);
+    if (room_list.length > max_room) {
+        renderOldRooms(room_list.slice(0, max_room), message_nav_container_current);
         $('#show-all-current').removeClass('d-none').addClass('d-flex');
     } else {
-        renderOldRooms(current_room_list, message_nav_container_current);
+        renderOldRooms(room_list, message_nav_container_current);
         $('#show-all-current').removeClass('d-flex').addClass('d-none');
     }
 
     is_show_all_current = false;
 }
 
-function showAllWaiting() {
+function showAllWaiting(room_list=waiting_room_list) {
     // console.log("show all waiting");
     $("#show-all-waiting").removeClass('d-flex').addClass('d-none');
     if (is_show_all_current) {
@@ -417,7 +497,7 @@ function showAllWaiting() {
     let section_chat_room_height = $("div.content-container").height();
     let section_current_height = $("#current-container").height();
     let section_waiting_height = $("#waiting-container").height();
-    if (waiting_room_list.length > max_room) {
+    if (room_list.length > max_room) {
         $("#waiting-container").css({ "height": (section_chat_room_height - section_current_height - section_status_span) + "px", "overflow-y": "auto", "max-height": "none" });
         $("#show-less-waiting").removeClass('d-none').addClass('d-flex');
     } else {
@@ -425,12 +505,12 @@ function showAllWaiting() {
         $("#show-less-waiting").removeClass('d-flex').addClass('d-none');
     }
     message_nav_container_waiting.innerHTML = "";
-    renderOldRooms(waiting_room_list, message_nav_container_waiting);
+    renderOldRooms(room_list, message_nav_container_waiting);
 
     is_show_all_waiting = true;
 }
 
-function showLessWaiting() {
+function showLessWaiting(room_list=waiting_room_list) {
     // console.log("show less waiting");
     let section_status_span = $("#current-rooms-span").height() * 2;
     let section_chat_room_height = $("div.content-container").height();
@@ -439,11 +519,11 @@ function showLessWaiting() {
     $("#show-less-waiting").removeClass('d-flex').addClass('d-none');
     message_nav_container_waiting.innerHTML = "";
     $("#waiting-container").css({ "height": "fit-content", "max-height": (section_waiting_height + section_status_span/2 < section_chat_room_height/2) ? "none" : "calc(50% - " + (section_status_span/2) + "px)" });
-    if (waiting_room_list.length > max_room) {
-        renderOldRooms(waiting_room_list.slice(0, max_room), message_nav_container_waiting);
+    if (room_list.length > max_room) {
+        renderOldRooms(room_list.slice(0, max_room), message_nav_container_waiting);
         $('#show-all-waiting').removeClass('d-none').addClass('d-flex');
     } else {
-        renderOldRooms(waiting_room_list, message_nav_container_waiting);
+        renderOldRooms(room_list, message_nav_container_waiting);
         $('#show-all-waiting').removeClass('d-flex').addClass('d-none');
     }
 
@@ -642,7 +722,7 @@ onSnapshot(query(col_rooms, orderBy("timestamp", "desc"), where("participants", 
     }));
     // console.log(current_room_list, waiting_room_list)
 
-    showAllCurrent();
+    if (!is_searching_room) showAllCurrent();
     // if (is_show_all_current) showAllCurrent();
     // else showLessCurrent();
     // if (is_show_all_waiting) showAllWaiting();
@@ -941,4 +1021,16 @@ $(document).on('change', '#toggle-bot', function() {
         updateDoc(docRoomByRoomId(room_id), update_room);
     }
 
+})
+
+// Handle search room
+$("#customer-name").on('input', function() {
+    if ($(this).val() != "") {
+        is_searching_room = true;
+        let current_room_filtered = current_room_list.filter(current_room => current_room.customer.name.toLowerCase().includes($(this).val().toLowerCase()));
+        showAllCurrent(current_room_filtered);
+    } else {
+        is_searching_room = false;        
+        showAllCurrent();
+    }
 })
