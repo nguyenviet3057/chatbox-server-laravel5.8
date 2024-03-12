@@ -359,7 +359,7 @@
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics.js";
         import { getAuth, connectAuthEmulator } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         // import { getDatabase, connectDatabaseEmulator, ref, child, push, get, set, update, serverTimestamp, onValue, off, query, orderByChild, equalTo, limitToLast } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
-        import { getFirestore, connectFirestoreEmulator, collection, orderBy, getDocs, doc, getDoc, addDoc, setDoc, updateDoc, serverTimestamp, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, connectFirestoreEmulator, collection, orderBy, getDocs, doc, getDoc, addDoc, setDoc, updateDoc, deleteDoc, serverTimestamp, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js";
     
         // Initialize Firebase
@@ -379,14 +379,14 @@
         var auth = getAuth(app);
         var fs = getFirestore(app);
 
-        let assistant_id = "asst_9Bu4bzbaY7ty84uVW7w07uuK"; // asst_XJdELsXpLgGLPRom0w5H2d4z
+        let assistant_id = "asst_XJdELsXpLgGLPRom0w5H2d4z";
 
         let header_auth = {
-            "Authorization": "Bearer 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"
+            "Authorization": "Bearer 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"
         };
 
         let headers = {
-            "Authorization": "Bearer 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",
+            "Authorization": header_auth.Authorization,
             "Content-Type": "application/json",
             "OpenAI-Beta": "assistants=v1"
         };
@@ -420,6 +420,10 @@
                                     // })
 
                                     $("#db-tables").find(`td.file-uploaded[data-table-name="${filename.split('.').slice(0, -1).join('.')}"]`).data('file-id', file_id);
+                                    $("#db-tables").find(`td.file-uploaded[data-table-name="${filename.split('.').slice(0, -1).join('.')}"]`).parent().find("td:last-child").append(
+                                        `<i class="fa fa-times text-danger btn icon-upload delete-btn delete-datafile" data-file-id="${file_id}" data-table-name="${filename.split('.').slice(0, -1).join('.')}"  >
+                                        </i>`
+                                    )
                                 }
                             })
                         })
@@ -566,6 +570,42 @@
                     }
                 })
             })
+        })
+
+        $(document).on('click', '.delete-datafile', function() {
+            let choice = confirm("Bạn chắc chắn muốn xoá dữ liệu này?");
+            if (choice) {
+                let file_id = $(this).data('file-id');
+                let table_name = $(this).data('table-name');
+                $(this).parent().parent().find(`td[data-table-name="${table_name}"]`).empty();
+                $(this).remove();
+                // console.log($(this).parent().parent().find(`td[data-table-name="${table_name}"]`)) 
+                deleteDoc(doc(fs, 'data_files', table_name)).then(() => {
+                    $.ajax({
+                        url: `https://api.openai.com/v1/files/${file_id}`,
+                        headers: header_auth,
+                        method: "DELETE",
+                        success: function(response) {
+                            console.log("Delete file: ", response);
+                            $.ajax({
+                                url: `https://api.openai.com/v1/assistants/${assistant_id}/files/${file_id}`,
+                                headers: headers,
+                                method: "DELETE",
+                                success: function(response) {
+                                    console.log("Delete assistant file: ", response);
+                                    retrieveFileIds();
+                                },
+                                error: function(err) {
+                                    console.log("Delete assistant file error: ", err);
+                                }
+                            })
+                        },
+                        error: function(err) {
+                            console.log("Delete file error: ", err);
+                        }
+                    })
+                });
+            }
         })
     </script>
 @stop
