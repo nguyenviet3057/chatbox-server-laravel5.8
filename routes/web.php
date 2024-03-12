@@ -40,6 +40,7 @@ Route::middleware('auth')->group(function() {
         Route::get('/edit/{id}', 'InstructionController@instructionEdit')->name('instruction.edit');
         Route::post('/edit/submit', 'InstructionController@instructionEditSubmit')->name('instruction.edit.submit');
         Route::post('/delete/submit', 'InstructionController@instructionDeleteSubmit')->name('instruction.delete.submit');
+        Route::post('/collection', 'InstructionController@getDatabase')->name('instruction.database.data');
     });
 });
 

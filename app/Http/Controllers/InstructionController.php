@@ -6,16 +6,24 @@ use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use stdClass;
+use ZipArchive;
 
 class InstructionController extends Controller
 {
     private $assistant_id;
     private $openai_key;
+    private $except_tables;
 
     public function __construct() {
         $this->assistant_id = "asst_XJdELsXpLgGLPRom0w5H2d4z";
-        $this->openai_key = "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";
+        $this->openai_key = "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";
+        $this->except_tables = [
+            'users',
+            'password_resets',
+            'migrations',
+        ];
     }
 
     function index() {
@@ -28,7 +36,22 @@ class InstructionController extends Controller
                 ->where('instruction', '!=', null)
                 ->get();
 
-            return view('instruction.index', compact('faqs', 'instructions'));
+            $tables = collect(DB::select('SHOW TABLES'))->pluck('Tables_in_chatmodule')->toArray();
+
+            $structure = [];
+
+            $tables = array_diff($tables, $this->except_tables);
+
+            foreach ($tables as $table) {
+                $structure[$table] = [];
+                $columns = Schema::getColumnListing($table);
+                
+                foreach ($columns as $column) {
+                    array_push($structure[$table], $column);
+                }            
+            }
+
+            return view('instruction.index', compact('faqs', 'instructions', 'structure'));
         } catch (Exception $ex) {
             return abort(500);
         }
@@ -279,5 +302,56 @@ class InstructionController extends Controller
         } catch (Exception $ex) {
             return false;
         }
+    }
+
+    function getDatabase(Request $request) {
+        $request->validate([
+            'table_name' => 'required'
+        ]);
+
+        $table_name = $request->table_name;
+
+        try {
+            $data = DB::table($table_name)->get();
+
+            return response()->json([
+                'status' => 1,
+                'msg' => 'Get data from table ' . $table_name . ' successfully!',
+                'data' => $data
+            ]);
+        } catch (Exception $ex) {
+            return response()->json([
+                'status' => 0,
+                'msg' => 'Error when collecting data',
+            ]);
+        }
+
+        // $tables = collect(DB::select('SHOW TABLES'))->pluck('Tables_in_chatmodule')->toArray();
+        // $file_structure = 'database_structure.sql';
+        // $database_structure = '';
+        // $database_data = [];
+        // $zip_file = 'database.zip';
+
+        // $zip = new ZipArchive;
+        // $zip->open($zip_file, ZipArchive::CREATE | ZipArchive::OVERWRITE);
+
+        // $tables = array_diff($tables, $this->except_tables);
+        // foreach ($tables as $table) {
+        //     $table_structure = DB::select("SHOW CREATE TABLE $table");
+            
+        //     $database_structure .= $table_structure[0]->{"Create Table"} . ";\n\n";
+        // }
+        // $zip->addFromString($file_structure, $database_structure);
+
+        // foreach ($tables as $table) {
+        //     $table_data = DB::table($table)->get();
+        
+        //     $database_data[$table] = $table_data;
+        //     $zip->addFromString($table.'.json', json_encode($table_data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT));
+        // }
+
+        // $zip->close();
+
+        // return response()->file($zip_file, ['Content-Disposition' => `inline; filename="$zip_file"`])->deleteFileAfterSend(true);
     }
 }

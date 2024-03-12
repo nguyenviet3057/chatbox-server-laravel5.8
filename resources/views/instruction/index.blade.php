@@ -89,6 +89,11 @@
             padding: 10px;
         }
 
+        .panel-db-tables {
+            max-height: 500px;
+            overflow: auto;
+        }
+
         table td.instruction-detail {
             /* width: 100%; */
             text-overflow: ellipsis;
@@ -108,6 +113,25 @@
             overflow: hidden;
             -webkit-line-clamp: 2;
             text-overflow: ellipsis;
+        }
+
+        .btn-fetch, .btn-download, .icon-upload {
+            border: 1px solid black;
+            background-color: #eeeeee;
+        }
+
+        .icon-upload {
+            position: relative;
+            overflow: hidden;
+        }
+
+        input.file-upload {
+            position: absolute;
+            top: 0;
+            right: 0;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
         }
     </style>
 @stop
@@ -170,6 +194,44 @@
                             <a class="delete-btn" data-id="instruction-{{ $instruction->id }}" role="button"><i class="fa fa-times text-danger"></i></a>
                         </td>
                     </tr>    
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h3 class="card-title w-100">Dữ liệu cung cấp</h3>
+            <button class="btn btn-success" id="update-data-files"><i class="fa fa-fw fa-arrow-up"></i>Cập nhật</button>
+        </div>
+        <!-- /.card-header -->
+        <div class="card-body panel panel-db-tables">
+            <table id="db-tables" class="table table-bordered table-striped">
+                <thead>
+                    <tr>
+                        <th>STT</th>
+                        <th>Tên file (.json)</th>
+                        <th>Dữ liệu từ cơ sở dữ liệu</th>
+                        <th>Dữ liệu huấn luyện</th>
+                        <th>Tải lên</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach ($structure as $table_name => $table_column)
+                    <tr>
+                        <td>{{ $loop->iteration }}</td>
+                        <td>{{ $table_name }}</td>
+                        <td>
+                            <button class='btn btn-fetch' data-table-name="{{ $table_name }}"><i class='fa fa-download fa-fw'></i><span>Lấy dữ liệu</span></button>
+                        </td>
+                        <td class="file-uploaded" data-table-name="{{ $table_name }}">
+                        </td>
+                        <td>
+                            <i class='fa fa-upload btn icon-upload'>
+                                <input class='file-upload' type='file'/>
+                            </i>
+                        </td>
+                    </tr>
                     @endforeach
                 </tbody>
             </table>
@@ -271,5 +333,239 @@
                 }
             }
         });
+
+        $(document).on('change', '.file-upload', function(event) {
+            console.log($(event.target.files)[0])
+            let file = $(event.target.files)[0];
+            if (file.type === 'application/json') {
+                var reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    var contents = e.target.result;
+                    $(event.target).closest('tr').children('td:nth-child(4)').empty();
+                    $(event.target).closest('tr').children('td:nth-child(4)').append(
+                        `<a class='btn btn-download' href='${contents}' download='${file.name}'><i class='fa fa-download fa-fw'></i>${file.name}
+                        </a>`
+                    );
+                };
+                
+                reader.readAsDataURL(file);
+            }
+        })
+    </script>
+    <script type="module">
+        // Import modules
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics.js";
+        import { getAuth, connectAuthEmulator } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        // import { getDatabase, connectDatabaseEmulator, ref, child, push, get, set, update, serverTimestamp, onValue, off, query, orderByChild, equalTo, limitToLast } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+        import { getFirestore, connectFirestoreEmulator, collection, orderBy, getDocs, doc, getDoc, addDoc, setDoc, updateDoc, serverTimestamp, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js";
+    
+        // Initialize Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyDw2S01aViwowyyJ-A0m7pVTX8OIZF2VJU",
+            authDomain: "ziczacapp.firebaseapp.com",
+            databaseURL: "https://ziczacapp-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "ziczacapp",
+            storageBucket: "ziczacapp.appspot.com",
+            messagingSenderId: "1054197522212",
+            appId: "1:1054197522212:web:02a6765b198580e53f9db1",
+            measurementId: "G-8XQG0CX88E"
+        };
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+        // var db = getDatabase(app);
+        var auth = getAuth(app);
+        var fs = getFirestore(app);
+
+        let assistant_id = "asst_9Bu4bzbaY7ty84uVW7w07uuK"; // asst_XJdELsXpLgGLPRom0w5H2d4z
+
+        let header_auth = {
+            "Authorization": "Bearer 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"
+        };
+
+        let headers = {
+            "Authorization": "Bearer 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",
+            "Content-Type": "application/json",
+            "OpenAI-Beta": "assistants=v1"
+        };
+
+        function retrieveFileIds() {
+            $.get({
+                url: `https://api.openai.com/v1/assistants/${assistant_id}/files`,
+                headers: headers,
+                success: function(response) {
+                    console.log(response)
+                    if (Array.isArray(response.data)) {
+                        response.data.forEach((item, index) => {
+                            console.log(item)
+                            let file_id = item.id;
+
+                            // Retrieve file
+                            $.get({
+                                url: `https://api.openai.com/v1/files/${file_id}`,
+                                headers: header_auth,
+                                success: function(response) {
+                                    console.log(response)
+                                    let filename = response.filename;
+
+                                    // Retrieve file content => Not allow for assistant files
+                                    // $.get({
+                                    //     url: `https://api.openai.com/v1/files/${file_id}/content`,
+                                    //     headers: header_auth,
+                                    //     success: function(response) {
+                                    //         console.log(response);
+                                    //     }
+                                    // })
+
+                                    $("#db-tables").find(`td.file-uploaded[data-table-name="${filename.split('.').slice(0, -1).join('.')}"]`).data('file-id', file_id);
+                                }
+                            })
+                        })
+                    }
+                },
+                error: function(err) {
+                    console.log(err);
+                }
+            })
+        }
+
+        $(document).ready(function() {
+            // Retrieve training data
+            $(".file-uploaded").each((index, element) => {
+                getDoc(doc(fs, 'data_files', $(element).data("table-name"))).then((data_file) => {
+                    if (data_file.exists() && data_file.data().contents != "") {
+                        $(element).append(`<a class='btn btn-download' href='${data_file.data().contents}' download='${data_file.id}.json'><i class='fa fa-download fa-fw'></i>${data_file.id}.json</a>`);
+                    }
+                });
+            })
+
+            retrieveFileIds();
+        })
+
+        $(document).on('click', '.btn-fetch', function() {
+            let btn = $(this);
+            let data = {
+                _token: $("input[name='_token']").val(),
+                table_name: $(this).data("table-name")
+            }
+            $.post({
+                url: "{{ route('instruction.database.data') }}",
+                data: data,
+                timeout: 5000,
+                success: function(result) {
+                    console.log(result.data);
+                    if (result.status == 1) {   
+                        const blob = new Blob([JSON.stringify(result.data, null, 2)], { type: 'application/json' });
+                        const url = URL.createObjectURL(blob);
+
+                        $(btn).parent().append(
+                            `<a class='btn btn-download' href='${url}' download='${$(btn).data('table-name')}.json'><i class='fa fa-download fa-fw'></i>${$(btn).data('table-name')}.json</a>`
+                        );
+                        $(btn).remove();
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error(error);
+                }
+            });
+        })
+
+        $("#update-data-files").click(function() {
+            console.log($("#db-tables").find('tbody tr td.file-uploaded'))
+            let file_ids = [];
+
+            let promises = [];
+            $("#db-tables").find('tbody tr td.file-uploaded').each((index, element) => {
+                let file_id = $(element).data('file-id');
+                if ($(element).find('a').length > 0) {
+                    setDoc(doc(fs, 'data_files', $(element).data("table-name")), {
+                        contents: $(element).find('a').prop("href")
+                    });
+
+                    var fileDataUrl = $(element).find('a').prop("href");
+                    var contentType = "application/json"; // Đổi thành loại dữ liệu mong muốn nếu cần
+                    var base64Data = fileDataUrl.split(",")[1]; // Lấy phần base64 từ data URL
+
+                    // Chuyển đổi dữ liệu base64 thành ArrayBuffer
+                    var binaryData = atob(base64Data);
+                    var arrayBuffer = new ArrayBuffer(binaryData.length);
+                    var uint8Array = new Uint8Array(arrayBuffer);
+                    for (var i = 0; i < binaryData.length; i++) {
+                        uint8Array[i] = binaryData.charCodeAt(i);
+                    }
+
+                    // Tạo đối tượng tệp tin từ ArrayBuffer
+                    var file = new File([uint8Array], `${$(element).data("table-name")}.json`, { type: contentType });
+
+                    var formData = new FormData();
+                    formData.append("purpose", "assistants");
+                    formData.append("file", file);
+
+                    // Upload files
+                    promises.push($.ajax({
+                        url: "https://api.openai.com/v1/files",
+                        headers: header_auth,
+                        type: "POST",
+                        data: formData,
+                        processData: false,
+                        contentType: false,
+                        success: function(response) {
+                            console.log("Uploaded successfully: ", response);
+                            file_ids.push(response.id);
+                            if (file_id) {
+                                // Delete assistant file
+                                // promises.push($.ajax({
+                                //     url: `https://api.openai.com/v1/assistants/${assistant_id}/files/${file_id}`,
+                                //     headers: headers,
+                                //     method: "DELETE",
+                                //     success: function(response) {
+                                //         console.log("Delete assistant file: ", response);
+                                //     },
+                                //     error: function(err) {
+                                //         console.log("Delete assistant file error: ", err);
+                                //     }
+                                // }));
+
+                                // Delete file
+                                promises.push($.ajax({
+                                    url: `https://api.openai.com/v1/files/${file_id}`,
+                                    headers: header_auth,
+                                    method: "DELETE",
+                                    success: function(response) {
+                                        console.log("Delete file: ", response);
+                                    },
+                                    error: function(err) {
+                                        console.log("Delete file error: ", err);
+                                    }
+                                }));
+                            }
+                        },
+                        error: function(xhr, status, error) {
+                            console.error("Error occurred: ", error);
+                        }
+                    }));
+                }
+            })
+
+            Promise.all(promises).then(function() {
+                console.log("New file ids: ", file_ids);
+                $.post({
+                    url: `https://api.openai.com/v1/assistants/${assistant_id}`,
+                    headers: headers,
+                    data: JSON.stringify({
+                        file_ids: file_ids
+                    }),
+                    success: function(response) {
+                        console.log("Update assistant files: ", response);
+                        retrieveFileIds();
+                    },
+                    error: function(err) {
+                        console.log("Update assistant files error: ", err);
+                    }
+                })
+            })
+        })
     </script>
 @stop
