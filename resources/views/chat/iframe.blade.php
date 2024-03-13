@@ -257,50 +257,100 @@
         }
 
         #chat-history .chat-message-list {
-            width: 100%;
+            width: calc(100% - 36px - 10px); /* avatar 36px, margin 10px */
             display: flex;
             flex-direction: column;
         }
 
+        /* Reply message section */
         .chat-message-list div.reply-note {
             display: flex;
             /* flex-direction: column; */
-            margin-top: 3px;
+            margin-top: 5px;
+            margin-bottom: -6px;
+            padding: 4px 8px 8px 4px;
+            margin-left: 5px;
+            margin-right: 5px;
         }
         .chat-message-list div.reply-note.images-message {
             max-width: 100px; /* .chat-message-list div.reply-note img -> max-width = 50px; */
         }
+        .chat-system .chat-message-list div.reply-note {
+            justify-content: flex-start;
+        }
         .chat-user .chat-message-list div.reply-note {
             justify-content: flex-end;
-            margin-right: 5px;
         }
-        .chat-system .chat-message-list div.reply-note {
-            margin-left: 5px;
+        .chat-message-list div.reply-note[data-reply-type="text"] {
+            background-color: #f7e3b4;
+            opacity: 0.7;
+            border-radius: 5px;
+            max-width: 64%;
+            width: fit-content;
         }
+        .chat-message-list div.reply-note[data-reply-type="markdown"] {
+            background-color: #f7e3b4;
+            opacity: 0.7;
+            border-radius: 5px;
+            max-width: 64%;
+        }
+        .chat-message-list div.reply-note[data-reply-type="image"] {
+            padding: 0px !important;
+            opacity: 0.7;
+            border-radius: 5px;
+        }
+        /* .chat-message-list div.reply-note[data-reply-type="product"] {
+            background-color: #f7e3b4;
+            opacity: 0.7;
+            border-radius: 5px;
+            max-width: 64%;
+        } */
+        /* .chat-message-list div.reply-note[data-reply-type="product"] span.product-title {
+            width: fit-content;
+            padding: 0px !important;
+            max-width: 100px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            overflow-wrap: break-word;
+        } */
         .chat-message-list div.reply-note > span {
             font-size: x-small;
             margin-bottom: -2px;
             width: fit-content;
         }
         .chat-message-list div.reply-note > span:last-child {
+            /* background-color: #f7e3b4; */
+            width: 100%;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            overflow-wrap: break-word;
+        }
+        .chat-message-list div.reply-note[data-reply-type="image"] > div {
             background-color: #f7e3b4;
-            opacity: 0.6;
             border-radius: 5px;
-            padding: 1px 3px;
+        }
+        .chat-message-list div.reply-note[data-reply-type="image"] > div:last-child {
+            padding-bottom: 8px !important;
         }
         .chat-message-list div.reply-note img {
             height: 50px;
             width: fit-content;
             /* max-width: 50px; */
             border-radius: 3px;
-            opacity: 0.6;
             object-fit: contain;
         }
 
+        /* Message content section */
         .chat-user .chat-message-list > div.w-100 {
             display: flex;
             flex-direction: column;
             align-items: flex-end;
+        }
+
+        .chat-message-list > div.w-100:has(> div.reply-note) .chat-message {
+            margin-top: 0px !important;
         }
 
         #chat-history .chat-message {
@@ -312,7 +362,7 @@
 
         #chat-history .chat-message:has(> div:first-child:not(:has(> img))) {
             padding: 4px 8px;
-            margin: 0px 5px 2px 5px;
+            margin: 5px 5px 2px 5px;
             /* background-color: #f2f2f2; */
             background-color: #f7e3b4;
             border-radius: 8px;
@@ -334,9 +384,10 @@
             margin-bottom: 0px;
         }
 
+        /* Chat containing text */
         #chat-history .chat-message:has(> span:first-child) {
             padding: 4px 8px;
-            margin: 0px 5px 2px 5px;
+            margin: 5px 5px 2px 5px;
             /* background-color: #f2f2f2; */
             background-color: #f7e3b4;
             border-radius: 8px;
@@ -348,8 +399,9 @@
             overflow-wrap: anywhere;
         }
 
+        /* Chat containing only one image */
         #chat-history .chat-message:has(> img:first-child) {
-            margin: 0px 5px 2px 5px;
+            margin: 5px 5px 2px 5px;
             /* background-color: #f2f2f2; */
             background-color: #f7e3b4;
             border-radius: 8px;
@@ -359,17 +411,21 @@
         #chat-history .chat-message:has(> img:first-child) img {
             border-radius: 8px;
             cursor: pointer;
+            border: 1px solid #f7e3b4;
+            border-radius: 8px;
         }
 
+        /* Chat containing many images */
         #chat-history .chat-message:has(> div.images-message:first-child) {
-            margin: 0px 5px 2px 5px;
+            margin: 5px 5px 2px 5px;
             min-height: 28px;
             max-width: 64%;
             justify-content: flex-end;
         }
 
+        /* Chat containing chatbot */
         #chat-history .chat-message:has(> div.chat-markdown:first-child) {
-            margin: 0px 5px 2px 5px;
+            margin: 5px 5px 2px 5px;
             padding: 4px 8px;
             background-color: #f7e3b4;
             border-radius: 8px;
@@ -512,6 +568,7 @@
         #chat-reply #chat-reply-container {
             position: relative;
             height: 36px;
+            width: calc(100% - 30px);
             display: flex;
             flex-direction: row;
             align-items: center;
@@ -530,6 +587,9 @@
             cursor: pointer;
             background-color: white;
         }
+        #chat-reply-container #reply-images > div {
+            max-height: 100%;
+        }
         #chat-reply-container #reply-images.d-show {
             display: flex;
         }
@@ -537,6 +597,14 @@
             display: flex;
             flex-direction: column;
             justify-content: center;
+            width: 100%;
+        }
+        #chat-reply-container #reply-detail > span {
+            width: 100%;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            overflow-wrap: break-word;
         }
         #chat-reply #reply-cancel {
             border: none;
@@ -759,7 +827,7 @@
             "chat": message_type == "text" ? message : "",
             "check": reply.check,
             "id": "",
-            "images": message_type == "text" ? [] : message,
+            "images": message_type == "text" ? [] : message, //
             "price": 0,
             "receiverId": system_data.id,
             "receiverName": system_data.name,
@@ -794,12 +862,19 @@
         };
         updateDoc(docRoomByRoomId(room_id), update_room);
 
+        /* Send Cloud Messaging */
+        if (message_type != "text") {
+            message = "đã gửi ảnh";
+        }
+        if ([CHECK_TYPE.REPLY_CHAT_TEXT, CHECK_TYPE.REPLY_CHAT_IMAGES, CHECK_TYPE.REPLY_CHAT_PRODUCT].includes(reply.check)) {
+            message = "đã trả lời: " + message;
+        }
         // Send Cloud Messaging Notification to mobile device
         if (system_data.token && system_data.token != "") {
             let data = {
                 "notification": {
                     "title": user_data.name, 
-                    "body": message_type == "text" ? message : "đã gửi ảnh",
+                    "body": message,
                     "icon": user_data.avatar_url
                 },
                 "priority": "high", 
@@ -807,7 +882,7 @@
                     "click_action":"test",
                     "id": "1",
                     "status": "done",
-                    "message" : message_type == "text" ? message : "đã gửi ảnh"
+                    "message" : message
                 },
                 "to": system_data.token
             };
@@ -827,7 +902,7 @@
             let data = {
                 "notification": {
                     "title": user_data.name, 
-                    "body": message_type == "text" ? message : "đã gửi ảnh"
+                    "body": message,
                     "icon": user_data.avatar_url
                 },
                 "priority": "high", 
@@ -835,7 +910,7 @@
                     "click_action":"test",
                     "id": "1",
                     "status": "done",
-                    "message" : message_type == "text" ? message : "đã gửi ảnh"
+                    "message" : message
                 },
                 "to": system_data.token_web
                 // "registration_ids": system_data.tokens
@@ -864,7 +939,7 @@
                 thread_id: thread_id
             };
             const headers = {
-                'Authorization': 'Bearer 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',
+                'Authorization': 'Bearer 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',
                 'Content-Type': 'application/json; charset=utf-8',
                 'OpenAI-Beta': 'assistants=v1',
             };
@@ -1243,16 +1318,30 @@
 
         let reply_content = "";
         if (is_reply) {
-            if (reply.type == "text") reply_content = "<div class='reply-note'><span>" + shortenStringDisplay(reply.message, 30) + "</span></div>";
-            else {
-                reply_content = "<div class='reply-note row w-100 images-message'>";
-                reply.images.forEach((img_src, index) => {
-                    reply_content +=
-                    "<div class='col-6 p-1 d-flex align-items-center justify-content-center'>" +
-                        "<img src='" + img_src + "' class='img-fluid'>" +
-                    "</div>";
-                })
-                reply_content += "</div>";
+            switch (reply.type) {
+                case "image":
+                    reply_content = "<div class='reply-note row w-100 images-message' data-reply-type='image'>";
+                    reply.images.forEach((img_src, index) => {
+                        reply_content +=
+                        "<div class='col-6 p-1 d-flex align-items-center justify-content-center'>" +
+                            "<img src='" + img_src + "' class='img-fluid'>" +
+                        "</div>";
+                    })
+                    reply_content += "</div>";
+                    break;
+                case "text":
+                    reply_content = "<div class='reply-note' data-reply-type='text'><span>" + shortenStringDisplay(reply.message, -1) + "</span></div>";
+                    break;
+                // case "product":
+                //     reply_content = `<div class='reply-note d-flex flex-column' data-reply-type='product'>
+                //         <div class='d-flex flex-row align-items-center'>
+                //             <img class='col-xs-4 p-0' src='${reply.product_image}'>
+                //             <div class='p-0 d-flex flex-column'>
+                //                 <span class='product-title p-1 col-xs-8'>${reply.product_title}</span>
+                //             </div>
+                //         </div>
+                //     </div>`;
+                //     break;
             }
         }
         // console.log(message_content);
@@ -1432,7 +1521,7 @@
     $(document).on('click', ".message-reply", function() {
         reply.id = $(this).prop("id");
         reply.name = $(this).parent().hasClass("user-message") ? user_data.name : system_data.name;
-        $("#reply-detail #reply-name").text(shortenStringDisplay(reply.name, 18));
+        $("#reply-detail #reply-name").text(shortenStringDisplay(reply.name, -1));
         switch ($(this).data("message-type")) {
             case "image":
                 reply.check = CHECK_TYPE.REPLY_CHAT_IMAGES;
@@ -1454,7 +1543,7 @@
                 reply.check = CHECK_TYPE.REPLY_CHAT_TEXT;
                 reply.reply = $(this).parent(".chat-message").children("span").eq(0).text();
                 reply.images = [];
-                $("#reply-detail #reply-content").text(shortenStringDisplay(reply.reply, 30));
+                $("#reply-detail #reply-content").text(shortenStringDisplay(reply.reply, -1));
                 $("#reply-images").removeClass('d-show');
                 $("#chat-history").removeClass('with-reply');
                 break;
@@ -1462,13 +1551,14 @@
                 reply.check = CHECK_TYPE.REPLY_CHAT_TEXT;
                 reply.reply = $(this).parent(".chat-message").children(".chat-markdown").eq(0).text();
                 reply.images = [];
-                $("#reply-detail #reply-content").text(shortenStringDisplay(reply.reply, 30));
+                $("#reply-detail #reply-content").text(shortenStringDisplay(reply.reply, -1));
                 $("#reply-images").removeClass('d-show');
                 $("#chat-history").removeClass('with-reply');
                 break;
         }
         $("#chat-history").addClass('with-reply');
         $("#chat-reply").addClass('d-flex');
+        $("textarea#message").focus();
     })
     function resetReply() {
         reply.id = "";

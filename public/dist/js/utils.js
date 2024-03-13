@@ -58,6 +58,8 @@ function autoUpdateTimeRepresent() {
 }
 
 function shortenStringDisplay(text, length) {
+    if (length == -1) return text;
+    text = '' + text;
     if (text.length <= length) return text;
     return text.substr(0, length) + "...";
 }
@@ -127,10 +129,4 @@ function uploadFile(file) {
         fd.append('enabled', 1);
         xhr.send(fd);
     });
-}
-
-function shortenStringDisplay(text, length) {
-    text = '' + text;
-    if (text.length <= length) return text;
-    return text.substr(0, length) + "...";
 }

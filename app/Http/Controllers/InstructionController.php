@@ -18,7 +18,7 @@ class InstructionController extends Controller
 
     public function __construct() {
         $this->assistant_id = "asst_XJdELsXpLgGLPRom0w5H2d4z";
-        $this->openai_key = "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";
+        $this->openai_key = "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";
         $this->except_tables = [
             'users',
             'password_resets',

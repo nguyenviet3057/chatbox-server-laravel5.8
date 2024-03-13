@@ -222,7 +222,7 @@ function renderMessage(message, is_reply=false, reply, avatar_url = avatar_list)
     if (is_reply) {
         switch (reply.type) {
             case "image":
-                reply_content = "<div class='reply-note row w-100 images-message'>";
+                reply_content = "<div class='reply-note row w-100 images-message' data-reply-type='image'>";
                 reply.images.forEach((img_src, index) => {
                     reply_content +=
                     "<div class='col-6 p-1 d-flex align-items-center justify-content-center'>" +
@@ -232,14 +232,18 @@ function renderMessage(message, is_reply=false, reply, avatar_url = avatar_list)
                 reply_content += "</div>";
                 break;
             case "text":
-                reply_content = "<div class='reply-note'><span>" + shortenStringDisplay(reply.message, 30) + "</span></div>";
+                reply_content = "<div class='reply-note' data-reply-type='text'><span>" + shortenStringDisplay(reply.message, -1) + "</span></div>";
                 break;
             case "product":
                 // console.log(reply);
-                reply_content = "<div class='reply-note d-flex flex-column'>" +
-                    "<img class='col-xs-4 p-0' src='" + reply.product_image + "'>" +
-                    "<span class='product-title col-xs-8'>" + reply.product_title + "</span>" +
-                "</div>";
+                reply_content = `<div class='reply-note d-flex flex-column' data-reply-type='product'>
+                    <div class='d-flex flex-row align-items-center'>
+                        <img class='col-xs-4 p-0' src='${reply.product_image}'>
+                        <div class='p-0 d-flex flex-column'>
+                            <span class='product-title p-1 col-xs-8'>${reply.product_title}</span>
+                        </div>
+                    </div>
+                </div>`;
                 break;
         }
     }
@@ -327,6 +331,7 @@ function renderOldMessage(messages, participants=[]) {
             reply_data.type = "product";
             reply_data.product_title = message.data().title;
             reply_data.product_image = message.data().askimg;
+            // reply_data.product_price = message.data().price;
             // console.log(reply_data)
         }
         switch (message.data().senderId) {
@@ -621,7 +626,7 @@ function addMessage(message, message_type="text") {
         "chat": message_type == "text" ? message : "đã gửi ảnh",
         "check": reply.check,
         "id": "",
-        "images": message_type == "text" ? [] : message,
+        "images": message_type == "text" ? [] : message, //
         "price": 0,
         "receiverId": customer_data.id,
         "receiverName": customer_data.name,
@@ -654,10 +659,17 @@ function addMessage(message, message_type="text") {
     updateDoc(docRoomByRoomId(room_id), update_room);
 
     // Send Cloud Messaging Notification to mobile device
+    if (message_type != "text") {
+        message = "đã gửi ảnh";
+    }
+    if ([CHECK_TYPE.REPLY_CHAT_TEXT, CHECK_TYPE.REPLY_CHAT_IMAGES, CHECK_TYPE.REPLY_CHAT_PRODUCT].includes(reply.check)) {
+        message = "đã trả lời: " + message;
+    }
+    
     let data = {
         "notification": {
             "title": system_data.name, 
-            "body": message_type == "text" ? message : "đã gửi ảnh",
+            "body": message,
             "icon": system_data.avatar_url
         },
         "priority": "high",
@@ -665,7 +677,7 @@ function addMessage(message, message_type="text") {
             "click_action":"test",
             "id": "1",
             "status": "done",
-            "message" : message_type == "text" ? message : "đã gửi ảnh"
+            "message" : message
         },
         "to": customer_data.token ?? ""
     };
@@ -818,7 +830,7 @@ function syncMessage(room_id) {
 $(document).on('click', ".message-reply", function() {
     reply.id = $(this).prop("id");
     reply.name = $(this).parent().hasClass("user-message") ? customer_data.name : system_data.name;
-    $("#reply-detail #reply-name").text(shortenStringDisplay(reply.name, 18));
+    $("#reply-detail #reply-name").text(shortenStringDisplay(reply.name, -1));
     switch ($(this).data("message-type")) {
         case "image":
             reply.check = CHECK_TYPE.REPLY_CHAT_IMAGES;
@@ -840,7 +852,7 @@ $(document).on('click', ".message-reply", function() {
             reply.check = CHECK_TYPE.REPLY_CHAT_TEXT;
             reply.reply = $(this).parent(".chat-message").children("span").eq(0).text();
             reply.images = [];
-            $("#reply-detail #reply-content").text(shortenStringDisplay(reply.reply, 30));
+            $("#reply-detail #reply-content").text(shortenStringDisplay(reply.reply, -1));
             $("#reply-images").removeClass('d-show');
             $("#chat-history").removeClass('with-reply');
             break;
@@ -858,7 +870,7 @@ $(document).on('click', ".message-reply", function() {
             reply.check = CHECK_TYPE.REPLY_CHAT_TEXT;
             reply.reply = $(this).parent(".chat-message").children(".chat-markdown").eq(0).text();
             reply.images = [];
-            $("#reply-detail #reply-content").text(shortenStringDisplay(reply.reply, 30));
+            $("#reply-detail #reply-content").text(shortenStringDisplay(reply.reply, -1));
             $("#reply-images").removeClass('d-show');
             $("#chat-history").removeClass('with-reply');
             break;
@@ -866,6 +878,7 @@ $(document).on('click', ".message-reply", function() {
     }
     $("#chat-history").addClass('with-reply');
     $("#chat-reply").addClass('d-flex');
+    $("textarea#message").focus();
 })
 function resetReply() {
     reply.id = "";
@@ -923,7 +936,7 @@ $(document).on('change', '#toggle-bot', function() {
         $.post({
             url: "https://api.openai.com/v1/threads",
             headers: {
-                'Authorization': 'Bearer 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',
+                'Authorization': 'Bearer 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',
                 'Content-Type': 'application/json; charset=utf-8',
                 'OpenAI-Beta': 'assistants=v1',
             },
